@@ -1,4 +1,4 @@
-**AI-Powered Job Search & Tracking System
+**AI-Powered Job Search & Tracking System**
 
 A tool for intelligent job searching, company tracking, and application management using AI and automation.
 
