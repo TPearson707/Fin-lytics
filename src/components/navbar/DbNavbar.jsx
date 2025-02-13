@@ -11,12 +11,13 @@ const DbNavbar = () => {
             <div className="nav-mid">
                 <ul>
                     <li><Link to="/">Home</Link></li>
-                    <li><Link to="/dashboard">Applied</Link></li>
-                    <li><Link to="/about">Saved</Link></li>
+                    <li><Link to="/jobtrack">Job Tracker</Link></li>
+                    {/* <li><Link to="/saved">Saved</Link></li> */}
                 </ul>
             </div>
             <div className="nav-right">
-                <Link to="/contact">About</Link>
+                {/* <Link to="/contact">Contact Us</Link> */}
+                <Link to="/about">About</Link>
                 <Link to="/">Profile</Link>
             </div>
 

@@ -10,13 +10,14 @@ const IntroNavbar = () => {
             </div>
             <div className="nav-mid">
                 <ul>
-                    <li><Link to="/">Home</Link></li>
-                    <li><Link to="/contact">About</Link></li>
-                    <li><Link to="/dashboard">Features</Link></li>
+                    {/* <li><Link to="/">Home</Link></li> */}
+                    
+                    {/* <li><Link to="/dashboard">Features</Link></li> */}
                 </ul>
             </div>
             <div className="nav-right">
-                {/* <Link to="/contact">About</Link> */}
+                {/* <Link to="/contact">Contact Us</Link> */}
+                <Link to="/about">About</Link>
                 <Link to="/">Log In</Link>
             </div>
         </div>

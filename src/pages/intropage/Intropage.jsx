@@ -1,13 +1,12 @@
 import "./intropage.scss"
-
+import LoginBlock from './login';
 import DbNavbar from "../../components/navbar/DbNavbar"
 
 const Intropage = () => {
     return (
         <div className="intropage">
-            <div className="wrapper">
-                <div className="textContainer">intro page</div>
-            </div>
+           intropage
+           <LoginBlock /> 
         </div>
     )
 }
