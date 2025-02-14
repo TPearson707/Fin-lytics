@@ -21,8 +21,19 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
+# A user must send a valid token to access the route
+# If token is valid, the user info is returned
+# Otherwise, authentication fails
 @app.get("/", status_code=status.HTTP_200_OK)
 async def user(user: user_dependency, db: db_dependency):
     if user is None:
         raise HTTPException(status_code=401, detail="Authentication Failed")
     return {"User": user}
+
+
+
+# Big Picture of Auth
+# User registers -> Password is hashed and stored
+# User logs in -> if password is correct, they receive a JWT token
+# User send token in requests -> Token is decoded to verify identity
+# Protected routes require tokens -> Unauthorized users get errored on
