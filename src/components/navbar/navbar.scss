@@ -21,16 +21,15 @@
   display: flex;
   justify-content: center;
   padding-right: 90px; //ignore... i was lazy
-}
-
-.nav-mid ul {
-  display: flex;
-  list-style: none;
-  padding: 0;
-}
-
-.nav-mid li {
-  margin: 0 15px; 
+  ul {
+    display: flex;
+    list-style: none;
+    padding: 0;
+  }
+  li {
+    margin: 0 15px; 
+  }
+  
 }
 
 .nav-mid a,
@@ -51,8 +50,7 @@
 .nav-right {
   display: flex;
   align-items: center;
-}
-
-.nav-right li {
-  margin: 0 15px;  
+  li {
+    margin: 0 15px;  
+  }
 }

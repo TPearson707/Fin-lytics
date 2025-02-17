@@ -6,7 +6,6 @@ import Intropage from './pages/intropage/Intropage';
 import Dashboard from './pages/dashboard/Dashboard';
 
 import About from './pages/about/About';
-//import Contact from './pages/contact/Contact'; //pages may change
 import JobTrack from './pages/jobtrack/jobtrack';
 import NoPage from "./pages/NoPage";
 

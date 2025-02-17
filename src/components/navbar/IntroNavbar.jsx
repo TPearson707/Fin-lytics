@@ -18,7 +18,8 @@ const IntroNavbar = () => {
             <div className="nav-right">
                 {/* <Link to="/contact">Contact Us</Link> */}
                 <Link to="/about">About</Link>
-                <Link to="/">Log In</Link>
+                {/* <Link to="/">Log In</Link>  */}
+                
             </div>
         </div>
     )

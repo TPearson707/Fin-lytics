@@ -1,57 +1,92 @@
-.login-block{
+.login-block {
     display: flex;
     align-items: center;      
-    height: 75vh;
+    margin-top: 40px;
+    margin-left: 30px;
+    
 }
+
 .login {
     background: white;
-    padding: 75px;
+    padding: 80px;
     border-radius: 10px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     text-align: center;
     font-family: Quicksand;
-  }
-  
- .login h2 {
-    margin-bottom: 20px;
-  }
-  
-  .login form {
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .login input {
-    margin-bottom: 10px;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-family: inherit;
-  }
-  
-  .login button {
-    background: #2e3fc4;
-    color: white;
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-family: inherit;
-  }
-  
-  .login button:hover {
-    background: #19278d;
-    transition: all 0.2s ease; 
+    
+    h2 {
+        margin-bottom: 20px;
+    }
+    form {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    input {
+        margin-bottom: 10px;
+        padding: 11px;
+        border: 1px solid #ccc;
+        border-radius: 20px;
+        font-family: inherit;
+        width: 40vh;
 
+        &:focus {
+            border-color: #7ed4d18e; 
+            outline: none; 
+            box-shadow: 0 0 5px rgba(112, 187, 178, 0.8); 
+        }
+    }
+
+
+}
+
+.login-container {
+    overflow: hidden;
+    max-height: 150px;
+    transition: max-height 0.4s ease-in-out;
+
+    &.expanded {
+      max-height: 400px;
+    }
+    &.collapsed {
+      max-height: 200px;
+    }
   }
 
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+  
+  .login {
+    button {
+      background: linear-gradient(120deg, #c4e6e1, #f7daf1, #ffeb9b);
+      background-size: 200% 200%;
+      color: rgb(97, 97, 97);
+      padding: 10px;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.3s ease-in-out;
+  
+      &:hover {
+        animation: gradientBG 3s infinite alternate ease-in-out;
+        color: rgb(157, 157, 157);
+        padding: 12px;
+      }
+    }
+  }
+  
   .toggle-text {
     color: #7e7e97;
     cursor: pointer;
     margin-top: 10px;
     font-size: 14px;
-  }
-  .toggle-text:hover {
-    text-decoration: underline;
-  }
   
+    &:hover {
+      text-decoration: underline;
+      color: #86d4de;
+    }
+  }
