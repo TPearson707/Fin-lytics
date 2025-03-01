@@ -1,15 +1,13 @@
-import "./intropage.scss"
-import LoginBlock from './login';
+import "./intropage.scss";
+import React from "react";
+import LoginBlock from "./login";
 
-const Intropage = () => {
-    return (
-        <div className="intropage">
-            <div className="login-block">
-                <LoginBlock />
-            </div>
-            
-        </div>
-    )
-}
+const Intropage = ({ setIsAuthenticated }) => {
+  return (
+    <div>
+      <LoginBlock setIsAuthenticated={setIsAuthenticated} />
+    </div>
+  );
+};
 
 export default Intropage;

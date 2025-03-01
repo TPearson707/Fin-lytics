@@ -26,6 +26,7 @@ oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token") # api endpoint for t
 # Pydantic models
 class CreateUserRequest(BaseModel):
     username: str
+    phone_number: str
     password: str
 
 class Token(BaseModel):
@@ -45,14 +46,23 @@ db_dependency = Annotated[Session, Depends(get_db)]
 # hash password before storing for increased security
 # The user gets added to the database, and account is created
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create_user(db: db_dependency,
-                      create_user_request: CreateUserRequest):
+async def create_user(db: db_dependency, create_user_request: CreateUserRequest):
+    # Check if the user already exists
+    existing_user = db.query(Users).filter(Users.username == create_user_request.username).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User with this email already exists",
+        )
+    
+    # Create the user if they don't exist
     create_user_model = Users(
         username=create_user_request.username,
+        phone_number=create_user_request.phone_number,
         hashed_password=bcrypt.hash(create_user_request.password),
     )
     
-    db.add(create_user_model) 
+    db.add(create_user_model)
     db.commit()
 
 # Takes in users username and password
