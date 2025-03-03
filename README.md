@@ -1,4 +1,5 @@
 **Finance Web App**
+
 *Finance Navigator is a comprehensive web application designed to empower users to manage their finances and monitor the market with intelligent insights. It integrates robust user authentication, detailed expense tracking, and market analysis tools—augmented with AI—to help users make informed decisions.*
 
 Features
