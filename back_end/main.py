@@ -1,4 +1,5 @@
 from fastapi import FastAPI, status, Depends, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 import models
 from database import engine, SessionLocal
 from typing import Annotated
@@ -7,9 +8,26 @@ import auth
 from auth import get_current_user
 
 app = FastAPI()
+
+origins = {
+    "https://localhost:5173",
+    "http://localhost:5173",
+}
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(auth.router)
 
+# Create MySQL tables (make sure this is called at least once)
 models.Base.metadata.create_all(bind=engine)
+
+#models.Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()
@@ -29,7 +47,6 @@ async def user(user: user_dependency, db: db_dependency):
     if user is None:
         raise HTTPException(status_code=401, detail="Authentication Failed")
     return {"User": user}
-
 
 
 # Big Picture of Auth

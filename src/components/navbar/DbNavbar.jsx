@@ -1,152 +1,84 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCircleUser, faAngleLeft, faAngleRight, faAngleDown } from "@fortawesome/free-solid-svg-icons";
-import miniLogo from "../../assets/miniLogo.png";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
+import axios from "axios";
+import './login.scss';
 
-//importing modal content
-import Modal from "../popups/modal"
-import NotificationBlock from "../popups/notifs";
-import LogoutBlock from "../popups/logout";
-import SettingsBlock from "../popups/settings";
+const LoginBlock = ({ toggleLoginBlock, isSigningUp: initialSigningUp, setIsAuthenticated }) => {
+    const [isSigningUp, setIsSigningUp] = useState(true);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [number, setNumber] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const navigate = useNavigate();
 
-import "./sidebar.scss";
+    useEffect(() => {
+        setIsSigningUp(initialSigningUp);
+    }, [initialSigningUp]);
 
-const user = { name: "Lilly" }; // set user name
+    const handleSubmit = async (e) => {
+        e.preventDefault();
 
-const DbNavbar = () => {
-    const [isExpanded, setIsExpanded] = useState(false);
-    const [isModalOpen, setModalOpen] = useState(false);
-    const [modalContent, setModalContent] = useState(null);
-    
-    const openModal = (contentComponent) => {
-        setModalContent(() => contentComponent);
-        setModalOpen(true);
-    };
+        if (isSigningUp && password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
 
-    const closeModal = () => {
-        setModalContent(null);
-        setModalOpen(false);
-    };
+        try {
+            if (isSigningUp) {
+                const response = await axios.post("http://localhost:8000/auth/", {
+                    username: email,
+                    phone_number: number,
+                    password: password,
+                });
+                console.log("Sign-up successful:", response.data);
+            }
+            
+            // Login (either after signup or direct sign-in)
+            const loginResponse = await axios.post(
+                "http://localhost:8000/auth/token",
+                new URLSearchParams({
+                    username: email,
+                    password: password,
+                }),
+                { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+            );
 
-    const toggleSidebar = () => {
-        setIsExpanded((prev) => !prev);
+            console.log("Login successful:", loginResponse.data);
+            localStorage.setItem("token", loginResponse.data.access_token);
+            setIsAuthenticated(true);
+            navigate("/dashboard");
+        } catch (error) {
+            console.error("Authentication error:", error.response ? error.response.data : error.message);
+            alert("Authentication failed. Please check your credentials and try again.");
+        }
     };
 
     return (
-        <>
-        <div className={`sidebar ${isExpanded ? "expanded" : "collapsed"}`}>
-            <div className="sidebar-content">
-                <div className="side-logo">
-                    <Link to="/"><img src={miniLogo} alt="MiniLogo" /></Link>
+        <div className='login-block'>
+            <div className="login">
+                <button className="close-btn" onClick={toggleLoginBlock}>x</button>
+                <h2>{isSigningUp ? 'Sign Up' : 'Log In'}</h2>
+                
+                <div className={`login-container ${isSigningUp ? 'expanded' : 'collapsed'}`}>
+                    <form onSubmit={handleSubmit}>
+                        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                        {isSigningUp && (
+                            <input type="tel" placeholder="Phone Number" value={number} onChange={(e) => setNumber(e.target.value)} required />
+                        )}
+                        <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                        {isSigningUp && (
+                            <input type="password" placeholder="Confirm Password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
+                        )}
+                        <button type="submit" className='submit-btn'>{isSigningUp ? 'Sign Up' : 'Sign In'}</button>
+                    </form>
                 </div>
 
-                <HamburgerContent isExpanded={isExpanded} toggleSidebar={toggleSidebar}/>
-                <MenuContainer isExpanded={isExpanded} toggleSidebar={toggleSidebar}/>
-
-            </div>
-
-            <ProfileDropdown user={user} isExpanded={isExpanded} toggleSidebar={toggleSidebar} openModal={openModal} />
-
-        </div>
-        
-        {isModalOpen && (
-            <div className="modal-overlay">
-                <Modal isOpen={isModalOpen} onClose={closeModal} content={modalContent ? modalContent() : null} />
-            </div>
-        )}
-        {/* render in modal */}
-
-        <CollapseButton isExpanded={isExpanded} toggleSidebar={toggleSidebar}/> 
-        {/* will hover outside of the bar when it is expanded, less conflict with dashboard contents */}
-   
-        </>
-        
-    );
-};
-
-// hamburger button
-const HamburgerContent = ({ isExpanded, toggleSidebar }) => (
-    <button 
-        className={`hamburger ${isExpanded ? "active" : ""}`} 
-        onClick={toggleSidebar}
-    >
-        <div className={`bun1 ${isExpanded ? "active" : ""}`}></div>
-        <div className={`bun2 ${isExpanded ? "active" : ""}`}></div>
-        <div className={`bun3 ${isExpanded ? "active" : ""}`}></div>
-    </button>
-);
-
-// menu content
-const MenuContainer = ({ isExpanded, toggleSidebar}) => (
-    <div className={`menu-container ${isExpanded ? "expanded" : "collapsed"}`}>
-        <ul>
-            <li><Link to="/">Dashboard</Link></li>
-            <li><Link to="/jobtrack">AI Portfolio</Link></li>
-        </ul>
-    </div>
-);
-
-//the profile icon button logic
-const ProfileDropdown = ({ user, isExpanded, toggleSidebar, openModal }) => {
-    const [isOpen, setIsOpen] = useState(false);
-
-    // close profile content when sidebar is collapsed
-    useEffect(() => {
-        if (!isExpanded) {
-            setIsOpen(false);
-        }
-    }, [isExpanded]);
-
-    const handleProfileClick = () => {
-        if (!isExpanded) {
-            toggleSidebar(); // expand sidebar
-            // setIsOpen(true); // open profile content
-        } else {
-            setIsOpen((prev) => !prev); // toggle profile content
-        }
-    };
-
-    return (
-        <div className="side-bot">
-            <div className="profile-drop">
-                <button className="profile-button" onClick={handleProfileClick}>
-                    <FontAwesomeIcon icon={faCircleUser} size="2xl" />
-                    {isExpanded && <span className="profile-icon-text">{user.name}</span>}
-                    {isExpanded && isOpen && <FontAwesomeIcon icon={faAngleDown} className="arrow" />}
-                </button>
-                {isExpanded && isOpen && (
-                    <ProfileContent user={user} openModal={openModal} />
-                )}                {/* must hand openModal to the profile content so that it can actually open it */}
+                <p onClick={() => setIsSigningUp(!isSigningUp)} className="toggle-text">
+                    {isSigningUp ? "Already have an account? Log In" : "Don't have an account? Sign Up"}
+                </p>
             </div>
         </div>
     );
 };
 
-// profile content inside the button, this is now a function rather than component
-const ProfileContent = ({ user, openModal }) => { // Add openModal
-    // if (!isExpanded) return null;
-
-    return (
-        <div className="profile-content">
-            <button onClick={() => openModal(() => <NotificationBlock />)}>Notifications</button>
-            <button onClick={() => openModal(() => <SettingsBlock />)}>Settings</button>
-            <button className="logout" onClick={() => openModal(() => <LogoutBlock />)}>Log Out</button>
-        </div>
-    );
-};
-
-
-
-//button to close sidebar
-const CollapseButton = ({isExpanded, toggleSidebar}) => (
-    <button 
-        className={`collapse-button ${isExpanded ? "visible" : "hidden"}`} 
-        onClick={toggleSidebar}
-        aria-label="Toggle Sidebar via closeBar"
-    >
-        <FontAwesomeIcon icon={isExpanded ? faAngleLeft : faAngleRight}/>
-     </button>
-);
-
-export default DbNavbar;
+export default LoginBlock;

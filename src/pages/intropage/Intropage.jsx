@@ -3,7 +3,7 @@ import "./intropage.scss";
 import LoginBlock from './login';
 // import DemoBlock from "./demo";
 
-const Intropage = () => {
+const Intropage = (setIsAuthenticated) => {
     const [showLogin, setShowLogin] = useState(false);
     const [isSigningUp, setIsSigningUp] = useState(false);
 
@@ -33,7 +33,8 @@ const Intropage = () => {
             {showLogin && (
                 <div className="overlay">
                     <div className="login-overlay">
-                        <LoginBlock toggleLoginBlock={() => setShowLogin(false)} isSigningUp={isSigningUp} />                    
+                        <LoginBlock toggleLoginBlock={() => setShowLogin(false)} isSigningUp={isSigningUp} setIsAuthenticated={setIsAuthenticated}/>                    
+                        {/* <LoginBlock setIsAuthenticated={setIsAuthenticated} /> */}
                     </div>
                 </div>
             )}
