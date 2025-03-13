@@ -18,7 +18,7 @@ const LoginBlock = ({ toggleLoginBlock, isSigningUp: initialSigningUp, setIsAuth
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (isSigningUp && password !== confirmPassword) {
+        if (isSigningUp && password != confirmPassword) {
             alert("Passwords do not match!");
             return;
         }

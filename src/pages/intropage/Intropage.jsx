@@ -3,7 +3,7 @@ import "./intropage.scss";
 import LoginBlock from './login';
 // import DemoBlock from "./demo";
 
-const Intropage = (setIsAuthenticated) => {
+const Intropage = ({setIsAuthenticated}) => {
     const [showLogin, setShowLogin] = useState(false);
     const [isSigningUp, setIsSigningUp] = useState(false);
 
