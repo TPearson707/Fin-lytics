@@ -25,6 +25,7 @@ oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token") # api endpoint for t
 
 # Pydantic models
 class CreateUserRequest(BaseModel):
+    email: str
     username: str
     phone_number: str
     password: str
@@ -65,6 +66,7 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
 
     # Create the user if they don't exist
     create_user_model = Users(
+        email=create_user_request.email,
         username=create_user_request.username,
         phone_number=create_user_request.phone_number,
         hashed_password=bcrypt.hash(create_user_request.password),
