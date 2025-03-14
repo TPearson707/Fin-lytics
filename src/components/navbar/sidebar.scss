@@ -21,7 +21,6 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    height: 100%;
     align-items: center;
     color: #fff;
     overflow-x: hidden;
@@ -31,7 +30,6 @@
 
 //logo section
 .side-logo {
-    justify-content: center;
     padding-bottom: 10px;
    
     img {
@@ -85,15 +83,6 @@
     width: 150px;
     transform: translateY(125px);
 }
-
-// @keyframes fadeAway {
-//     0% {
-//         opacity: 1;
-//     }
-//     100% {
-//         opacity: 0;
-//     }
-// }
 
 .menu-container {
     display: flex;

@@ -13,7 +13,7 @@ import DbNavbar from "./components/navbar/DbNavbar";
 import IntroNavbar from "./components/navbar/IntroNavbar";
 
 const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(true);
 
   // Check if the user is authenticated on initial load (e.g., from localStorage)
   useEffect(() => {

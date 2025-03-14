@@ -8,7 +8,7 @@ import miniLogo from "../../assets/miniLogo.png";
 import Modal from "../popups/modal"
 import NotificationBlock from "../popups/notifs";
 import LogoutBlock from "../popups/logout";
-import SettingsBlock from "../popups/settings";
+import SettingsBlock from "../popups/settings/settings";
 
 import "./sidebar.scss";
 
@@ -51,7 +51,6 @@ const DbNavbar = ({setIsAuthenticated}) => {
 
                 <HamburgerContent isExpanded={isExpanded} toggleSidebar={toggleSidebar}/>
                 <MenuContainer isExpanded={isExpanded} toggleSidebar={toggleSidebar}/>
-                <button className="logout" onClick={handleLogout}>Log Out</button>
             </div>
 
             <ProfileDropdown user={user} isExpanded={isExpanded} toggleSidebar={toggleSidebar} openModal={openModal} handleLogout={handleLogout}/>
@@ -132,13 +131,15 @@ const ProfileDropdown = ({ user, isExpanded, toggleSidebar, openModal, handleLog
 };
 
 // profile content inside the button, this is now a function rather than component
-const ProfileContent = ({ user, openModal }) => { // Add openModal
+const ProfileContent = ({ user, openModal, handleLogout}) => { // Add openModal
     // if (!isExpanded) return null;
 
     return (
         <div className="profile-content">
             <button onClick={() => openModal(() => <NotificationBlock />)}>Notifications</button>
             <button onClick={() => openModal(() => <SettingsBlock />)}>Settings</button>
+            <button className="logout" onClick={handleLogout}>Log Out</button>
+
         </div>
     );
 };
