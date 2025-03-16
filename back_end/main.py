@@ -7,6 +7,7 @@ from typing import Annotated
 from sqlalchemy.orm import Session
 import auth
 from auth import get_current_user
+import user_settings
 
 app = FastAPI()
 
@@ -26,6 +27,8 @@ app.add_middleware(
 
 app.include_router(auth.router)
 app.include_router(plaid_routes.router)  # Include Plaid API routes
+app.include_router(user_settings.router)
+
 # Create MySQL tables (make sure this is called at least once)
 models.Base.metadata.create_all(bind=engine)
 
