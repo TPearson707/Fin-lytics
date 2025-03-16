@@ -1,6 +1,7 @@
 from fastapi import FastAPI, status, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import models
+import plaid_routes
 from database import engine, SessionLocal
 from typing import Annotated
 from sqlalchemy.orm import Session
@@ -12,6 +13,7 @@ app = FastAPI()
 origins = {
     "https://localhost:5173",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 }
 
 app.add_middleware(
@@ -23,7 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-
+app.include_router(plaid_routes.router)  # Include Plaid API routes
 # Create MySQL tables (make sure this is called at least once)
 models.Base.metadata.create_all(bind=engine)
 

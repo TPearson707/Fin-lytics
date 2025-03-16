@@ -10,31 +10,56 @@ const SettingsBlock = () => {
     useEffect(() => {
         const fetchLinkToken = async () => {
             try {
-                const response = await axios.post("http://localhost:8000/create_link_token", {}, { withCredentials: true });
+                const token = localStorage.getItem("token");
+
+
+                const response = await axios.post(
+                    "http://localhost:8000/create_link_token",
+                    {},
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                        withCredentials: true,
+                    }
+                );
+
+                //console.log("Plaid Link Token:", response.data.link_token);
                 setLinkToken(response.data.link_token);
             } catch (error) {
-                console.error("Error fetching Plaid link token:", error);
+                console.error("Error fetching Plaid link token:", error.response ? error.response.data : error);
             }
         };
 
         fetchLinkToken();
     }, []);
 
-    const onSuccess = useCallback(async (publicToken) => {
+    const onSuccess = useCallback(async (publicToken, metadata) => {
         try {
-            await axios.post("http://localhost:8000/exchange_public_token", { public_token: publicToken }, { withCredentials: true });
+            const token = localStorage.getItem("token");
+        
+            const response = await axios.post(
+                "http://localhost:8000/exchange_public_token",
+                { public_token: publicToken },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    withCredentials: true,
+                }
+            );
+
+            
             setIsLoggedIn(true);
         } catch (error) {
-            console.error("Error exchanging public token:", error);
+            console.error("Error exchanging public token:", error.response ? error.response.data : error);
         }
     }, []);
 
-    const config = {
-        token: linkToken,
-        onSuccess,
-    };
+    const config = linkToken
+        ? {
+              token: linkToken,
+              onSuccess,
+          }
+        : null;
 
-    const { open, ready } = usePlaidLink(config);
+    const { open, ready } = usePlaidLink(config || {});
 
     return (
         <div className="settings-content">
@@ -76,7 +101,6 @@ const FinanceSettings = ({ isLoggedIn, linkToken, open, ready }) => {
         </div>
     );
 };
-
 
 const AccountSettings = () => {
     return (
