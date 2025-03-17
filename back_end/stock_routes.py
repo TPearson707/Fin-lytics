@@ -7,14 +7,15 @@ from auth import get_current_user
 from pydantic import BaseModel
 from polygon import RESTClient
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
-
+load_dotenv()
 
 router = APIRouter(
     prefix='/stocks',
     tags=['stocks']
 )
-polygonapi = RESTClient("")#polygon api key goes here
+polygonapi = RESTClient("POLYGON_API_KEY")#polygon api key goes here
 
 
 # Dependency to get the database session
@@ -55,7 +56,7 @@ class Stockcustombars(BaseModel):
 
 
 @router.get("/getCustomBars", status_code=status.HTTP_200_OK)
-async def get_lastquote(data: Stockcustombars):
+async def get_CustomBars(data: Stockcustombars):
     try:
         custombars = polygonapi.list_aggs(
             data.tick,
