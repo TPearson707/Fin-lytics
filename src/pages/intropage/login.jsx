@@ -38,6 +38,7 @@ const LoginBlock = ({ toggleLoginBlock, isSigningUp: initialSigningUp, setIsAuth
                 });
                 console.log("Sign-up successful:", response.data);
             }
+
             
             // Login (either after signup or direct sign-in)
             const loginResponse = await axios.post(

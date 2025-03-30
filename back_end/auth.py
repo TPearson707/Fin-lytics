@@ -5,7 +5,7 @@ from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 from starlette import status
 from database import SessionLocal
-from models import Users
+from models import Users, Settings
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
@@ -55,9 +55,9 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists",
+            detail="User with this username already exists",
         )
-    
+
     # Check if the phone number already exists
     existing_number = db.query(Users).filter(Users.phone_number == create_user_request.phone_number).first()
     if existing_number:
@@ -75,14 +75,25 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
         phone_number=create_user_request.phone_number,
         hashed_password=bcrypt.hash(create_user_request.password),
     )
-    
+
     db.add(create_user_model)
     db.commit()
-    
+
+    # Create default settings for the user (with all notifications set to False)
+    user_settings = Settings(
+        user_id=create_user_model.id,
+        email_notifications=False,
+        sms_notifications=False,
+        push_notifications=False,
+    )
+    db.add(user_settings)
+    db.commit()
+
     # Generate token after creating user
     token = create_access_token(create_user_model.username, create_user_model.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    
+
     return {"access_token": token, "token_type": "bearer"}
+
 
 # Takes in users username and password
 # Retrive the user from the database

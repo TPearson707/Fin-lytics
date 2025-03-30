@@ -25,7 +25,7 @@ const SettingsBlock = () => {
     const checkPlaidStatus = async () => {
       try {
         const token = localStorage.getItem("token");
-        await api.get("http://localhost:8000/accounts", {
+        await api.get("http://localhost:8000/accounts/", {
           headers: { Authorization: `Bearer ${token}` },
           withCredentials: true,
         });
@@ -45,7 +45,7 @@ const SettingsBlock = () => {
             try {
                 const token = localStorage.getItem("token");
                 const response = await axios.post(
-                    "http://localhost:8000/create_link_token",
+                    "http://localhost:8000/create_link_token/",
                     {},
                     {
                         headers: { Authorization: `Bearer ${token}` },
@@ -65,7 +65,7 @@ const SettingsBlock = () => {
             try {
                 const token = localStorage.getItem("token");
                 const response = await axios.get(
-                    "http://localhost:8000/user_settings",
+                    "http://localhost:8000/user_settings/", // change made by Thomas Pearson
                     {
                         headers: { Authorization: `Bearer ${token}` },
                         withCredentials: true,
@@ -81,7 +81,7 @@ const SettingsBlock = () => {
             try {
                 const token = localStorage.getItem("token");
                 const response = await axios.get(
-                    "http://localhost:8000/user_info",
+                    "http://localhost:8000/user_info/",
                     {
                         headers: { Authorization: `Bearer ${token}` },
                         withCredentials: true,
@@ -103,7 +103,7 @@ const SettingsBlock = () => {
         try {
         const token = localStorage.getItem("token");
         await axios.post(
-            "http://localhost:8000/exchange_public_token",
+            "http://localhost:8000/exchange_public_token/",
             { public_token: publicToken },
             {
             headers: { Authorization: `Bearer ${token}` },
@@ -125,7 +125,7 @@ const SettingsBlock = () => {
             const updatedSettings = { ...settings, [name]: value };
             setSettings(updatedSettings);
             await axios.post(
-                "http://localhost:8000/user_settings",
+                "http://localhost:8000/user_settings/",
                 updatedSettings,
                 {
                     headers: { Authorization: `Bearer ${token}` },
@@ -141,7 +141,7 @@ const SettingsBlock = () => {
         try {
             const token = localStorage.getItem("token");
             await axios.put(
-                "http://localhost:8000/auth/update",
+                "http://localhost:8000/auth/update/",
                 updateData,
                 {
                     headers: { Authorization: `Bearer ${token}` },
@@ -151,7 +151,7 @@ const SettingsBlock = () => {
             alert("User account settings updated successfully");
             // Fetch updated user info
             const response = await axios.get(
-                "http://localhost:8000/user_info",
+                "http://localhost:8000/user_info/",
                 {
                     headers: { Authorization: `Bearer ${token}` },
                     withCredentials: true,
