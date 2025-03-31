@@ -1,0 +1,106 @@
+.navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    font-family: "Quicksand", sans-serif; //imported
+  }
+  
+  .nav-left {
+    display: flex;
+    align-items: center;
+  }
+  
+  
+  .nav-mid {
+    display: flex;
+    justify-content: center;
+    padding-right: 90px; //ignore... i was lazy
+    ul {
+      display: flex;
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      margin: 0 15px; 
+    }
+    
+  }
+  
+  .nav-mid a,
+  .nav-right a {
+    text-decoration: none;
+    color: rgb(88, 88, 88);
+    padding: 10px 15px; 
+    border-radius: 40px; 
+    transition: all 0.2s ease; 
+  }
+  
+  .nav-mid a:hover,
+  .nav-right a:hover {
+    background-color: #d1d1d1; 
+    // color: white;
+  }
+  
+  .nav-right {
+    position: relative;
+    display: flex;
+    align-items: center;
+    li {
+      margin: 0 15px;  
+    }
+  }
+
+.profilebtn-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.profilebtn {
+    cursor: pointer;
+    color: #3c553e;
+    border: none;
+    background-color: transparent;
+    border-radius: 50px;
+    padding: 5px;
+    transition: background-color 0.3s ease;
+ 
+
+    &:hover{
+        background-color: #e9e9e9;
+    }
+
+}
+
+.profile-content{
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    z-index: 1;
+    width: 200px;
+    padding: 10px;
+}
+
+.profile-content button {
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    color: #3c553e;
+    background-color: #f4f4f4;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 4px;
+  }
+  
+  .profile-content button:hover {
+    background-color: #ddd;
+  }
