@@ -44,7 +44,7 @@ async def get_user_settings(user: user_dependency, db: db_dependency):
 
 # Update user settings in the database
 # If settings do not exist, create new settings for the user
-@router.put("/", status_code=status.HTTP_200_OK)
+@router.post("/", status_code=status.HTTP_200_OK)
 async def update_user_settings(
     user: user_dependency, db: db_dependency, settings_update: SettingsUpdateRequest
 ):
