@@ -231,4 +231,4 @@ async def verify_email(token: str, db: db_dependency):
     user.verification_token = None
     db.commit()
     
-    return {"message": "Email verified successfully"}
+    return "Email verified successfully"
