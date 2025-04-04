@@ -31,6 +31,8 @@ class UpdateUserInfo(BaseModel):
     Schema for updating user information.
     """
     username: str
+    first_name: str
+    last_name: str
     email: str
     phone_number: str
     password: str
