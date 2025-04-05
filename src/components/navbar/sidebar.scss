@@ -1,8 +1,8 @@
 .sidebar {
-    width: 40px;
+    width: 150px;
     background-color: #749181;
     padding: 15px 10px;
-    height: 95vh; //so that i can see, some displays need 100vh
+    height: 90vh; //so that i can see, some displays need 100vh
     // position: fixed;
     transition: width 0.3s ease-in-out;
     display: flex;
@@ -11,10 +11,6 @@
     justify-content: space-between;
     position: fixed;
 
-}
-
-.sidebar.expanded {
-    width: 150px;
 }
 
 .sidebar-content {
@@ -37,53 +33,6 @@
     }
 }
 
-.hamburger {
-    width: 40px;
-    height: 40px;
-    border-radius: 50px;
-    border: none;
-    background-color: transparent;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s ease;
-
-    &:hover {
-        cursor: pointer;
-        background-color: #54695d;
-    }
-}
-    .hamburger.active {
-        pointer-events: none;
-        background-color: transparent;
-    }
-
-//hamburger menu buns
-.bun1, .bun2, .bun3 {
-    width: 25px;
-    height: 2px;
-    background-color: white;
-    border-radius: 20px;
-    margin: 2px 0;
-    transition: 0.3s ease-in-out;
-}
-
-//hamburger animation
-.bun1.active {
-    width: 150px;
-}
-.bun2.active {
-    width: 150px;
-    animation: fadeAway 0.3s ease-out forwards;
-    animation-delay: 0.5s;
-    transform: translateY(-6px);
-}
-.bun3.active {
-    width: 150px;
-    transform: translateY(125px);
-}
-
 .menu-container {
     display: flex;
     flex-direction: column;
@@ -92,23 +41,7 @@
     width: 100%;
     transition: max-height 0.3s ease-in-out 0.3s, 
                 opacity 0.3s ease-in-out 0.3s; 
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    // flex-grow: 1;
- 
-    &.collapsed {
-        pointer-events: none;
-        transition: max-height 0.3s ease-in-out, 
-                opacity 0.3s ease-in-out ; 
-    }
-
-    &.expanded {
-        max-height: 225px; 
-        opacity: 1;
-        pointer-events: all;
-    }
-}
+ }
 
 .menu-container ul {
     list-style: none;
@@ -198,10 +131,6 @@
     }
 }
 
-.logout {
-
-}
-
 //icon button styles
 .profile-icon-text{
     font-family: Quicksand;
@@ -224,52 +153,30 @@
     }
 }
 
-.profile-button {
-    cursor: pointer;
-    color: #ffffff;
-    border: none;
-    background-color: transparent;
-    border-radius: 50px;
-    padding: 5px;
-    transition: background-color 0.3s ease;
-    margin-bottom: 10px;
-    width: 120px;
+// .profile-button {
+//     cursor: pointer;
+//     color: #ffffff;
+//     border: none;
+//     background-color: transparent;
+//     border-radius: 50px;
+//     padding: 5px;
+//     transition: background-color 0.3s ease;
+//     margin-bottom: 10px;
+//     width: 120px;
 
-    &:hover{
-        background-color: #54695d;
-    }
+//     &:hover{
+//         background-color: #54695d;
+//     }
 
-    .arrow {
-        transition: transform 0.3s ease;
-    }
+//     .arrow {
+//         transition: transform 0.3s ease;
+//     }
 
-    &.open .arrow {
-        transform: rotate(180deg);
-    }
-}
+//     &.open .arrow {
+//         transform: rotate(180deg);
+//     }
+// }
 
-.collapse-button {
-    position: fixed;
-    left: 40px; 
-    top: 50vh;
-    width: 35px;
-    height: 30px;
-    // background-color: #3f5147; test color
-    background-color: #749181;
-    border: none;
-    border-radius: 40px;
-    color: white;
-    cursor: pointer;
-    transition: all 0.3s ease-in-out;
-
-    &:hover {
-        width: 45px;
-    }
-}
-
-.sidebar.expanded + .collapse-button {
-    left: 150px; 
-}
 
 .modal-overlay{
     display: flex;

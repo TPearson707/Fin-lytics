@@ -1,6 +1,6 @@
 import "./jobtrack.scss"
 
-import DbNavbar from "../../components/navbar/DbNavbar"
+import DbNavbar from "../../components/navbar/sidebar"
 
 const JobTrack = () => {
     return (

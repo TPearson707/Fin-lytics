@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom"
-import "./navbar.scss"
+import "./intronav.scss"
 import finLogo from "../../assets/finLogo.png";
 
 

@@ -1,6 +1,6 @@
 import "./about.scss"
 
-import DbNavbar from "../../components/navbar/DbNavbar"
+import DbNavbar from "../../components/navbar/Sidebar"
 
 const About = () => {
     return (

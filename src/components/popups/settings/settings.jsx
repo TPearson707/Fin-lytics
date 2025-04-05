@@ -72,6 +72,7 @@ const SettingsBlock = () => {
                         withCredentials: true,
                     }
                 );
+                console.log("Fetched user settings:", response.data); //debug
                 setSettings(response.data);
             } catch (error) {
                 console.error("Error fetching user settings:", error.response ? error.response.data : error);
@@ -120,12 +121,18 @@ const SettingsBlock = () => {
         }
     }, []);
 
-    const handleToggleChange = async (name, value) => {
+    const handleToggleChange = async (name, value) => { //chaning notif setting/toggle buttons (sigh)
+    
         try {
             const token = localStorage.getItem("token");
+            console.log("Token:", token); //debug 
             const updatedSettings = { ...settings, [name]: value };
+
             setSettings(updatedSettings);
-            await axios.put(
+
+            console.log("Sending updated settings:", updatedSettings); //for debug
+
+            await axios.post( //send settings
                 "http://localhost:8000/user_settings/",
                 updatedSettings,
                 {
@@ -133,15 +140,28 @@ const SettingsBlock = () => {
                     withCredentials: true,
                 }
             );
+
+            const response = await axios.get( //fetch the settings to update the state
+                "http://localhost:8000/user_settings/",
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    withCredentials: true,
+                }
+            );
+
+            console.log("Updated settings fetched from backend:", response.data); //debug
+
+            setSettings(response.data);
+
         } catch (error) {
             console.error("Error updating user settings:", error.response ? error.response.data : error);
         }
     };
 
-    const handleUpdateUser = async (updateData) => {
+    const handleUpdateUser = async (updateData) => { //updating user creds
         try {
             const token = localStorage.getItem("token");
-            await axios.put(
+            await axios.post(
                 "http://localhost:8000/auth/update/",
                 updateData,
                 {
@@ -150,7 +170,7 @@ const SettingsBlock = () => {
                 }
             );
             alert("User account settings updated successfully");
-            // Fetch updated user info
+            // fetch updated user info
             const response = await axios.get(
                 "http://localhost:8000/user_info/",
                 {
@@ -164,7 +184,7 @@ const SettingsBlock = () => {
         }
     };
 
-    const config = linkToken
+    const config = linkToken //plaid link token
         ? {
               token: linkToken,
               onSuccess,

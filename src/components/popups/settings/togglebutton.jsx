@@ -1,14 +1,25 @@
 import { useState, useEffect } from "react";
 import "./toggle.scss"
 
-const ToggleButton = ({label}) => {
+const ToggleButton = ({label, checked, onChange}) => {
+    const handleToggle = (e) => {
+        onChange(e.target.checked);
+    };
+
     return (
         <div className="button-container">
             <div className="toggle-switch">
-                <input type="checkbox" className="checkbox" name={label} id={label}/>
+                <input
+                    type="checkbox"
+                    className="checkbox"
+                    name={label}
+                    id={label}
+                    checked={checked} // bind the checked state
+                    onChange={handleToggle} // handle toggle changes
+                />
                 <label className="label" htmlFor={label}>
-                    <span className="inner"/>
-                    <span className="switch"/>
+                    <span className="inner" />
+                    <span className="switch" />
                 </label>
             </div>
         </div>

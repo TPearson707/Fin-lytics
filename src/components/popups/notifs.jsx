@@ -3,9 +3,14 @@ import { useState, useEffect } from "react";
 
 const NotificationBlock = () => {
     return (
-        <div className="Notification-block">
-            Notification
-        </div>
+        <div className="notification-block">
+        <h3>Notifications</h3>
+        <ul>
+            <li>Notification 1</li>
+            <li>Notification 2</li>
+            <li>Notification 3</li>
+        </ul>
+    </div>
     )
 }
 

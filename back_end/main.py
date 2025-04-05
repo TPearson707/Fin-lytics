@@ -10,6 +10,7 @@ from auth import get_current_user
 import user_info
 import user_settings
 import stock_routes
+# import notification (lilly's test of notification api, removed idea)
 
 app = FastAPI()
 
@@ -32,6 +33,7 @@ app.include_router(plaid_routes.router)  # Include Plaid API routes
 app.include_router(user_info.router)
 app.include_router(user_settings.router)
 app.include_router(stock_routes.router)
+
 
 # Create MySQL tables (make sure this is called at least once)
 models.Base.metadata.create_all(bind=engine)
