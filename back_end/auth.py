@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta
 from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from pydantic import BaseModel, EmailStr
