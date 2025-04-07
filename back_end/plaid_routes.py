@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from cryptography.fernet import Fernet
@@ -10,12 +10,16 @@ from plaid.model.products import Products
 from plaid.model.country_code import CountryCode
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
 from plaid.model.accounts_get_request import AccountsGetRequest
+from plaid.model.transactions_get_request import TransactionsGetRequest
 from plaid.configuration import Configuration
 from plaid.api_client import ApiClient
 from database import SessionLocal
 from models import Users
 from auth import get_current_user
 from dotenv import load_dotenv
+from models import Users, Plaid_Bank_Account, Plaid_Transactions
+from datetime import datetime, timedelta
+from datetime import date
 
 # Load environment variables from .env file
 load_dotenv()
@@ -82,16 +86,126 @@ async def create_link_token(user: dict = Depends(get_current_user)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+def fetch_and_store_accounts(user_id: int):
+    """Background task to fetch Plaid accounts for this user and store them in Plaid_Bank_Account."""
+    db = SessionLocal()
+    try:
+        # 1) Retrieve user & decrypt token
+        db_user = db.query(Users).filter(Users.id == user_id).first()
+        if not db_user or not db_user.plaid_access_token:
+            return  # user or token missing
+
+        decrypted_access_token = decrypt_token(db_user.plaid_access_token)
+
+        # 2) Fetch accounts
+        accounts_request = AccountsGetRequest(
+            client_id=PLAID_CLIENT_ID,
+            secret=PLAID_SECRET,
+            access_token=decrypted_access_token
+        )
+        accounts_response = client.accounts_get(accounts_request)
+        accounts_data = accounts_response.to_dict().get("accounts", [])
+
+        # 3) Save accounts
+        for acc in accounts_data:
+            # Check if this account already exists
+            existing_account = (
+                db.query(Plaid_Bank_Account)
+                .filter_by(account_id=acc["account_id"])
+                .first()
+            )
+            if existing_account:
+                # Optionally update balances, etc.
+                existing_account.current_balance = acc["balances"].get("current")
+                existing_account.available_balance = acc["balances"].get("available")
+                existing_account.currency = acc["balances"].get("iso_currency_code")
+                existing_account.name = acc["name"]
+                existing_account.type = acc["type"]
+                existing_account.subtype = acc.get("subtype")
+            else:
+                # Create a new bank account record
+                new_account = Plaid_Bank_Account(
+                    user_id=user_id,
+                    account_id=acc["account_id"],
+                    name=acc["name"],
+                    type=acc["type"],
+                    subtype=acc.get("subtype"),
+                    current_balance=acc["balances"].get("current"),
+                    available_balance=acc["balances"].get("available"),
+                    currency=acc["balances"].get("iso_currency_code"),
+                )
+                db.add(new_account)
+        db.commit()
+
+        # 4) Now fetch transactions for these accounts
+        #    You can fetch them in one call or multiple calls per account.
+        fetch_and_store_transactions(db, decrypted_access_token)
+
+    except Exception as e:
+        print("Error fetching/storing accounts:", e)
+    finally:
+        db.close()
+
+def fetch_and_store_transactions(db: Session, decrypted_access_token: str):
+    """Fetch transactions for the last 30 days and store them in Plaid_Transactions."""
+    try:
+        # 1) Prepare date range
+        end_date = datetime.now().date()
+        start_date = (datetime.now() - timedelta(days=30)).date()
+
+        # 2) Fetch transactions
+        transactions_request = TransactionsGetRequest(
+            client_id=PLAID_CLIENT_ID,
+            secret=PLAID_SECRET,
+            access_token=decrypted_access_token,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        transactions_response = client.transactions_get(transactions_request)
+        transactions_data = transactions_response.to_dict().get("transactions", [])
+
+        # 3) Store each transaction
+        for t in transactions_data:
+            existing_tx = (
+                db.query(Plaid_Transactions)
+                .filter_by(transaction_id=t["transaction_id"])
+                .first()
+            )
+            if existing_tx:
+                continue  # or update if you prefer
+
+            # If Plaid returns the date as a string, parse it:
+            tx_date = (
+                t["date"]
+                if isinstance(t["date"], date)
+                else datetime.strptime(t["date"], "%Y-%m-%d").date()
+            )
+
+            new_tx = Plaid_Transactions(
+                transaction_id=t["transaction_id"],
+                account_id=t["account_id"],  # references Plaid_Bank_Account.account_id
+                amount=t["amount"],
+                currency=t.get("iso_currency_code"),
+                category=", ".join(t["category"]) if t.get("category") else None,
+                merchant_name=t.get("merchant_name"),
+                date=tx_date,
+            )
+            db.add(new_tx)
+        db.commit()
+    except Exception as e:
+        print("Error importing transactions:", e)
+
 @router.post("/exchange_public_token")
 async def exchange_public_token(
     request: PublicTokenRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
-    """Exchange a public token for an access token and store it securely."""
+    """Exchange a public token for an access token, store it, and automatically import transactions."""
     try:
-        #print("Received Public Token:", request.public_token)  # Debug log
-
         exchange_request = ItemPublicTokenExchangeRequest(
             client_id=PLAID_CLIENT_ID,
             secret=PLAID_SECRET,
@@ -111,10 +225,14 @@ async def exchange_public_token(
         db_user.plaid_access_token = encrypted_access_token
         db.commit()
 
-        return {"message": "Plaid access token stored securely"}
+        # Schedule the transactions import as a background task
+        background_tasks.add_task(fetch_and_store_accounts, user["id"])
+
+        return {"message": "Plaid access token stored and transactions import scheduled"}
     except Exception as e:
-        print(f"Plaid API Error: {str(e)}")  # Debug log
+        print(f"Plaid API Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/accounts")
 async def get_accounts(
@@ -149,54 +267,29 @@ async def get_accounts(
             #print("Error body:", e.body)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/transactions")
-async def get_transactions(
-    start_date: str = Query((datetime.today() - timedelta(days=30)).strftime('%Y-%m-%d')),
-    end_date: str = Query(datetime.today().strftime('%Y-%m-%d')),
-    db: Session = Depends(get_db),
-    user: dict = Depends(get_current_user)
-):
-    """Retrieve transactions securely for the logged-in user."""
-    try:
-        db_user = db.query(Users).filter(Users.id == user["id"]).first()
-        if not db_user or not db_user.plaid_access_token:
-            raise HTTPException(status_code=400, detail="No Plaid account linked")
-
-        # Decrypt the stored Plaid token
-        decrypted_access_token = decrypt_token(db_user.plaid_access_token)
-        
-        # Import the TransactionsGetRequest model
-        from plaid.model.transactions_get_request import TransactionsGetRequest
-        
-        # Create the request object including client_id and secret
-        request_obj = TransactionsGetRequest(
-            client_id=PLAID_CLIENT_ID,
-            secret=PLAID_SECRET,
-            access_token=decrypted_access_token,
-            start_date=start_date,
-            end_date=end_date
-        )
-        
-        # Call the transactions_get endpoint on the client and return its response as a dictionary
-        response = client.transactions_get(request_obj)
-        return response.to_dict()
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
 
 @router.delete("/unlink")
 async def unlink_plaid(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
-    """Remove the stored Plaid token for the current user."""
+    """Remove the stored Plaid token and delete all bank accounts and transaction data for the current user."""
     db_user = db.query(Users).filter(Users.id == user["id"]).first()
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
     # Clear the Plaid access token
     db_user.plaid_access_token = None
+
+    # Delete all associated bank accounts (transactions will be deleted by cascade)
+    # If the relationship in Users is defined with cascade="all, delete-orphan"
+    # then you can simply clear the relationship:
+    db_user.bank_accounts = []
+
+    # Alternatively, if you prefer to delete explicitly:
+    # for account in db_user.bank_accounts:
+    #     db.delete(account)
+    
     db.commit()
     
-    return {"message": "Plaid access token deleted. Please re-link your account."}
+    return {"message": "Plaid access token and all associated bank accounts and transactions deleted. Please re-link your account."}

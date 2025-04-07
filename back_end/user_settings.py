@@ -11,28 +11,40 @@ router = APIRouter(
     tags=['user_settings']
 )
 
-# Dependency to get the database session
+# Database session dependency
 def get_db():
+    """
+    Creates a new database session for the request and ensures it is closed after use.
+    """
     db = SessionLocal()
-    try:                # Try to get db
+    try:
         yield db
     finally:
-        db.close()      # Regardless of success, close db
+        db.close()
 
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-# Pydantic model for updating settings
 class SettingsUpdateRequest(BaseModel):
+    """
+    Schema for updating user settings.
+    """
     email_notifications: bool
     sms_notifications: bool
     push_notifications: bool
 
-# Retrieve user settings from the database
-# If settings do not exist for the user, return 404 error
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_user_settings(user: user_dependency, db: db_dependency):
+    """
+    Retrieves the notification settings for the currently authenticated user.
+
+    - **Returns:**
+      - `email_notifications`: Whether email notifications are enabled
+      - `sms_notifications`: Whether SMS notifications are enabled
+      - `push_notifications`: Whether push notifications are enabled
+    """
     settings = db.query(Settings).filter(Settings.user_id == user["id"]).first()
+
     if not settings:
         raise HTTPException(status_code=404, detail="Settings not found")
 
@@ -42,12 +54,24 @@ async def get_user_settings(user: user_dependency, db: db_dependency):
         "push_notifications": settings.push_notifications
     }
 
-# Update user settings in the database
-# If settings do not exist, create new settings for the user
 @router.post("/", status_code=status.HTTP_200_OK)
 async def update_user_settings(
     user: user_dependency, db: db_dependency, settings_update: SettingsUpdateRequest
 ):
+    """
+    Updates the notification settings for the currently authenticated user.
+
+    - **Validations:**
+      - If no existing settings are found, a new settings entry is created.
+
+    - **Updates:**
+      - `email_notifications`
+      - `sms_notifications`
+      - `push_notifications`
+
+    - **Returns:**
+      - The updated user settings.
+    """
     settings = db.query(Settings).filter(Settings.user_id == user["id"]).first()
 
     if not settings:
@@ -71,4 +95,3 @@ async def update_user_settings(
         "sms_notifications": settings.sms_notifications,
         "push_notifications": settings.push_notifications
     }
-
