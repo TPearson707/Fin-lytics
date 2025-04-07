@@ -86,8 +86,9 @@ const Sidebar = ({ setIsAuthenticated }) => {
 const MenuContainer = () => (
     <div className="menu-container">
         <ul>
-            <li><Link to="/">Dashboard</Link></li>
-            <li><Link to="/jobtrack">AI Portfolio</Link></li>
+            <li><Link to="/">Overview</Link></li>
+            <li><Link to="/portfolio">Portfolio</Link></li>
+            <li><Link to="/Budget">Budgeter</Link></li>
         </ul>
     </div>
 );
