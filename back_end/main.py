@@ -11,6 +11,7 @@ import user_info
 import user_settings
 import user_categories
 import stock_routes
+import pie_chart
 # import notification (lilly's test of notification api, removed idea)
 
 app = FastAPI()
@@ -35,6 +36,7 @@ app.include_router(user_info.router)
 app.include_router(user_settings.router)
 app.include_router(user_categories.router)
 app.include_router(stock_routes.router)
+app.include_router(pie_chart.router)
 
 
 # Create MySQL tables (make sure this is called at least once)

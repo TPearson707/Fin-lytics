@@ -6,17 +6,13 @@ from models import Users
 from auth import get_current_user, hashPassword
 from pydantic import BaseModel
 
-
 router = APIRouter(
     prefix='/user_info',
     tags=['user_info']
 )
 
-# Database session dependency
+# ==================== Dependencies ====================
 def get_db():
-    """
-    Creates a new database session for the request and ensures it is closed after use.
-    """
     db = SessionLocal()
     try:
         yield db
@@ -26,10 +22,8 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
+# ==================== Schemas ====================
 class UpdateUserInfo(BaseModel):
-    """
-    Schema for updating user information.
-    """
     username: str
     first_name: str
     last_name: str
@@ -37,16 +31,9 @@ class UpdateUserInfo(BaseModel):
     phone_number: str
     password: str
 
-@router.get("/", status_code=status.HTTP_200_OK)
-async def get_user_info(user: user_dependency, db: db_dependency):
-    """
-    Retrieves the information of the currently authenticated user.
+# ==================== Logic ====================
 
-    - **Returns:**
-      - `username`: The user's username
-      - `email`: The user's email
-      - `phone_number`: The user's phone number
-    """
+def get_user_info(user: dict, db: Session):
     user_record = db.query(Users).filter(Users.username == user["username"]).first()
 
     if not user_record:
@@ -60,27 +47,7 @@ async def get_user_info(user: user_dependency, db: db_dependency):
         "phone_number": user_record.phone_number,
     }
 
-@router.post("/", status_code=status.HTTP_200_OK)
-async def update_user_info(
-    user: user_dependency,
-    db: db_dependency,
-    user_update: UpdateUserInfo
-):
-    """
-    Updates the currently authenticated user's information.
-
-    - **Validations:**
-      - Ensures the user exists
-      - Checks if the new email is already in use before updating
-
-    - **Updates:**
-      - `username`
-      - `email`
-      - `phone_number`
-
-    - **Returns:**
-      - A success message along with the updated user details
-    """
+def update_user_info(user: dict, db: Session, user_update: UpdateUserInfo):
     user_record = db.query(Users).filter(Users.username == user["username"]).first()
 
     if not user_record:
@@ -96,7 +63,6 @@ async def update_user_info(
         if existing_user:
             raise HTTPException(status_code=400, detail="Phone number already in use")
 
-    # Apply updates
     user_record.username = user_update.username
     user_record.first_name = user_update.first_name
     user_record.last_name = user_update.last_name
@@ -115,3 +81,13 @@ async def update_user_info(
         "email": user_record.email,
         "phone_number": user_record.phone_number,
     }
+
+# ==================== Routes ====================
+
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get(user: user_dependency, db: db_dependency):
+    return get_user_info(user, db)
+
+@router.post("/", status_code=status.HTTP_200_OK)
+async def update(user: user_dependency, db: db_dependency, user_update: UpdateUserInfo):
+    return update_user_info(user, db, user_update)
