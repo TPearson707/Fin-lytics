@@ -7,12 +7,12 @@ router = APIRouter(
 )
 
 my_pi_chart = {
-    "Travel": 12,
-    "Food": 2,
-    "Entertainment": 3,
-    "Shopping": 4,
+    "Travel": 5,
+    "Food and Drink": 10,
+    "Entertainment": 7,
+    "Shopping": 6,
     "Utilities": 8,
-    "Other": 16,
+    "Other": 10,
 }
 
 @router.get("/")
