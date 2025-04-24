@@ -87,6 +87,7 @@ const MenuContainer = () => (
     <div className="menu-container">
         <ul>
             <li><Link to="/">Overview</Link></li>
+            <li><Link to="/Stock">Stock AI</Link></li>
             <li><Link to="/portfolio">Portfolio</Link></li>
             <li><Link to="/Budget">Budgeter</Link></li>
         </ul>

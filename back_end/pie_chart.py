@@ -8,7 +8,7 @@ router = APIRouter(
 
 my_pi_chart = {
     "Travel": 5,
-    "Food and Drink": 10,
+    "Food": 10,
     "Entertainment": 7,
     "Shopping": 6,
     "Utilities": 8,

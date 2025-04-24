@@ -58,10 +58,45 @@ const VisualCard = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const chartOptions = {
+        reponsive: true, //still keeping responsive
+        plugins:{
+            legend: {
+                position: "bottom",
+                labels: {
+                    font: {
+                        family: "Quicksand",
+                        weight: "Bold",
+                    },
+                },
+            },
+            tooltip: {
+                bodyFont:{
+                    family: "Quicksand",
+                    weight: "Bold",
+                },
+                titleFont: {
+                    family: "Quicksand",
+                    weight: "Bold",
+                },
+            },
+        },
+
+    };
+
     return (
-    <div className="visual-card">
+    <div className="visual-card" 
+    style={{
+        display: "flex",
+        flexDirection: "column",
+        // alignItems: "center",
+        // justifyContent: "center",
+        width: "100%",
+        height: "auto",
+    }}
+    >
         {pieChartData ? (
-        <Pie data={pieChartData} options={{ responsive: true }} />
+        <Pie data={pieChartData} options={ chartOptions } />
         ) : (
         <p>Loading chart data...</p>
         )}

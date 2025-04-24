@@ -3,7 +3,7 @@ import "./portfolio.scss"
 const Portfolio = () => {
     return (
         <div className="page-container">
-            portfolio: stock market functionalities, reports, etc.
+            portfolio: user brokerage account, stocks, crypto, etc.
         </div>
     )
 }

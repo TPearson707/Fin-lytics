@@ -8,41 +8,46 @@ import VisualCard from "./cards/visualdata.jsx"
 // import MyAccountsCard from "./cards/myaccounts.jsx"
 import ProjectionsCard from "./cards/projections.jsx"
 import TransactionCard from "./cards/transactions.jsx"
+import EditTransactions from "./popups/editTransactions.jsx";
+import ManageBudgets from "./popups/manageBudget.jsx";
+import EditAccounts from "./popups/editAccounts.jsx";
+
 
 const Budget = () => {
     return (
         <div className="page-container">
                 <h2>Budget Manager</h2>
             <div className="budget-content">
+                <div className="group1">
                     <div className="quick-card">
                         <div className="card-title">Quick Access</div>
                         <QuickAccess/>
                     </div>
-
-                    <div className="week-card">
-                        <div className="card-title">Weekly Overview</div>
-                        <WeeklyOverview/>
-                    </div>
-
-                    <div className="visual-card">
-                        <div className="card-title">Data Analytics</div>
-                        <VisualCard/>
-                    </div>
-
                     <div className="myaccounts-card">
                         <div className="card-title">My Accounts</div>
                         <MyAccounts/>
                     </div>
-                    
-                    <div className="projections-card">
-                        <div className="card-title">Budget Projections</div>
-                        <ProjectionsCard/>
-                    </div>
-
                     <div className="transactions-card">
                         <div className="card-title">Recent Transactions</div>
                         <TransactionCard/>
                     </div>
+                </div>
+                <div className="group2">
+                    <div className="week-card">
+                        <div className="card-title">Weekly Overview</div>
+                        <WeeklyOverview/>
+                    </div>
+                </div>
+                <div className="group3">
+                    <div className="visual-card">
+                        <div className="card-title">Data Analytics</div>
+                        <VisualCard/>
+                    </div>
+                    <div className="projections-card">
+                        <div className="card-title">Budget Projections</div>
+                        <ProjectionsCard/>
+                    </div>
+                </div>
             </div>
         </div>
     )
@@ -51,13 +56,27 @@ const Budget = () => {
 export default Budget;
 
 const QuickAccess = () => { //need to open modal for each button
+    const [isEditTransactionsOpen, setIsEditTransactionsOpen] = useState(false);
+    const [isManageBudgetsOpen, setIsManageBudgetsOpen] = useState(false);
+    const [isEditAccountsOpen, setIsEditAccountsOpen] = useState(false);
+
     return (
         <div className="card-content">
             <div className="card-body">
-                <button>Edit Transactions</button>
-                <button>Manage Budget</button>
-                <button>Edit Accounts</button>
+                <button onClick={() => setIsEditTransactionsOpen(true)}>Edit Transactions</button>
+                <button onClick={() => setIsManageBudgetsOpen(true)}>Manage Budget</button>
+                <button onClick={() => setIsEditAccountsOpen(true)}>Edit Accounts</button>
             </div>
+
+            {isEditTransactionsOpen && (
+                <EditTransactions onClose={() => setIsEditTransactionsOpen(false)} />
+            )}
+            {isManageBudgetsOpen && (
+                <ManageBudgets onClose={() => setIsManageBudgetsOpen(false)} />
+            )}
+            {isEditAccountsOpen && (
+                <EditAccounts onClose={() => setIsEditAccountsOpen(false)} />
+            )}
         </div>
     );
 }
