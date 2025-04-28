@@ -1,0 +1,100 @@
+.page-container {
+    .budget-content {
+        display: grid;
+        grid-template-columns: 25% 50% 25%; 
+        grid-template-areas: 
+            "group1 group2 group2"
+            "group1 group3 group3"; 
+        padding: 10px;
+        gap: 10px;
+        color: #313531;
+        height: auto;  
+        grid-auto-rows: min-content;  
+    }
+
+    .group1 {
+        grid-area: group1;
+        display: flex;  
+        flex-direction: column;
+        // grid-template-rows: auto auto auto;  
+        gap: 10px;
+
+        > div {
+            background-color: #f0f4f0; 
+            border: 1px solid #c4d2c4;  
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            height: auto;
+        }
+    }
+
+    .group2 {
+        grid-area: group2;
+        display: grid;  
+
+        > div {
+            background-color: #f0f4f0;  
+            border: 1px solid #c4d2c4;  
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    .group3 {
+        grid-area: group3;
+        grid-template-rows: auto auto;  
+        height: auto; 
+        gap: 10px;
+        display: flex;
+
+        > div {
+            flex: 1;
+            background-color: #f0f4f0; 
+            border: 1px solid #c4d2c4; 
+            border-radius: 8px;
+            padding: 10px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+    }
+
+    .card-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+
+    .card-content {
+        .card-body {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: auto; 
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        .card-body button {
+            font: inherit;
+            padding: 5px 10px;
+            background-color: transparent;
+            border: none;
+            color: #313531;
+
+            &:hover {
+                color: #54695d;
+                cursor: pointer;
+            }
+        }
+
+        .card-body li {
+            font: inherit;
+            list-style: none;
+            padding: 5px 10px;
+            background-color: transparent;
+            border: none;
+            color: #313531;
+        }
+    }
+}

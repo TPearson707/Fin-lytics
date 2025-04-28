@@ -11,11 +11,9 @@ router = APIRouter(
     tags=['user_settings']
 )
 
-# Database session dependency
+# ==================== Dependencies ====================
+
 def get_db():
-    """
-    Creates a new database session for the request and ensures it is closed after use.
-    """
     db = SessionLocal()
     try:
         yield db
@@ -25,24 +23,16 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
+# ==================== Schemas ====================
+
 class SettingsUpdateRequest(BaseModel):
-    """
-    Schema for updating user settings.
-    """
     email_notifications: bool
     sms_notifications: bool
     push_notifications: bool
 
-@router.get("/", status_code=status.HTTP_200_OK)
-async def get_user_settings(user: user_dependency, db: db_dependency):
-    """
-    Retrieves the notification settings for the currently authenticated user.
+# ==================== Logic ====================
 
-    - **Returns:**
-      - `email_notifications`: Whether email notifications are enabled
-      - `sms_notifications`: Whether SMS notifications are enabled
-      - `push_notifications`: Whether push notifications are enabled
-    """
+def get_user_settings_logic(user: dict, db: Session):
     settings = db.query(Settings).filter(Settings.user_id == user["id"]).first()
 
     if not settings:
@@ -54,24 +44,7 @@ async def get_user_settings(user: user_dependency, db: db_dependency):
         "push_notifications": settings.push_notifications
     }
 
-@router.post("/", status_code=status.HTTP_200_OK)
-async def update_user_settings(
-    user: user_dependency, db: db_dependency, settings_update: SettingsUpdateRequest
-):
-    """
-    Updates the notification settings for the currently authenticated user.
-
-    - **Validations:**
-      - If no existing settings are found, a new settings entry is created.
-
-    - **Updates:**
-      - `email_notifications`
-      - `sms_notifications`
-      - `push_notifications`
-
-    - **Returns:**
-      - The updated user settings.
-    """
+def update_user_settings_logic(user: dict, db: Session, settings_update: SettingsUpdateRequest):
     settings = db.query(Settings).filter(Settings.user_id == user["id"]).first()
 
     if not settings:
@@ -88,10 +61,20 @@ async def update_user_settings(
         settings.push_notifications = settings_update.push_notifications
 
     db.commit()
-    db.refresh(settings)  # ensure the updated data is fetched
+    db.refresh(settings)
 
     return {
         "email_notifications": settings.email_notifications,
         "sms_notifications": settings.sms_notifications,
         "push_notifications": settings.push_notifications
     }
+
+# ==================== Routes ====================
+
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get(user: user_dependency, db: db_dependency):
+    return get_user_settings_logic(user, db)
+
+@router.post("/", status_code=status.HTTP_200_OK)
+async def update(user: user_dependency, db: db_dependency, settings_update: SettingsUpdateRequest):
+    return update_user_settings_logic(user, db, settings_update)

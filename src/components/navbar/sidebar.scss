@@ -2,14 +2,14 @@
     width: 150px;
     background-color: #749181;
     padding: 15px 10px;
-    height: 90vh; //so that i can see, some displays need 100vh
+    height: 100%; //so that i can see, some displays need 100vh
     // position: fixed;
     transition: width 0.3s ease-in-out;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    position: fixed;
+    // position: fixed;
 
 }
 

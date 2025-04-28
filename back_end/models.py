@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey , Float, Date, DateTime
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float, Date, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -21,6 +21,12 @@ class Users(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    categories = relationship(
+        "User_Categories",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+
 
 class Settings(Base):
     __tablename__ = "Settings"
@@ -30,7 +36,6 @@ class Settings(Base):
     email_notifications = Column(Boolean, default=False)
     sms_notifications = Column(Boolean, default=False)
     push_notifications = Column(Boolean, default=False)
-
 
 
 class Plaid_Bank_Account(Base):
@@ -53,6 +58,7 @@ class Plaid_Bank_Account(Base):
         cascade="all, delete-orphan"
     )
 
+
 class Plaid_Transactions(Base):
     __tablename__ = "Plaid_Transactions"
 
@@ -70,3 +76,42 @@ class Plaid_Transactions(Base):
     date = Column(Date)
     created_at = Column(DateTime, default=datetime.utcnow)
     bank_account = relationship("Plaid_Bank_Account", back_populates="transactions")
+    transaction_categories = relationship(
+        "Transaction_Category_Link",
+        back_populates="transaction",
+        cascade="all, delete-orphan"
+    )
+
+
+class User_Categories(Base):
+    __tablename__ = "User_Categories"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
+    name = Column(String(100), nullable=False)
+    color = Column(String(7), nullable=False)
+    weekly_limit = Column(Float, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user = relationship("Users", back_populates="categories")
+    transaction_links = relationship(
+        "Transaction_Category_Link",
+        back_populates="category",
+        cascade="all, delete-orphan"
+    )
+    __table_args__ = (
+        UniqueConstraint('user_id', 'name', name='_user_name_uc'),
+    )
+
+
+class Transaction_Category_Link(Base):
+    __tablename__ = "Transaction_Category_Link"
+
+    id = Column(Integer, primary_key=True)
+    transaction_id = Column(String(50), ForeignKey("Plaid_Transactions.transaction_id", ondelete="CASCADE"), nullable=False)
+    category_id = Column(Integer, ForeignKey("User_Categories.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    transaction = relationship("Plaid_Transactions", back_populates="transaction_categories")
+    category = relationship("User_Categories", back_populates="transaction_links")
+    __table_args__ = (
+        UniqueConstraint('transaction_id', name='_transaction_id_uc'),
+    )

@@ -17,9 +17,10 @@ from database import SessionLocal
 from models import Users
 from auth import get_current_user
 from dotenv import load_dotenv
-from models import Users, Plaid_Bank_Account, Plaid_Transactions
+from models import Users, Plaid_Bank_Account, Plaid_Transactions, User_Categories, Transaction_Category_Link
 from datetime import datetime, timedelta
 from datetime import date
+from user_categories import create_user_category, UserCategoryCreate
 
 # Load environment variables from .env file
 load_dotenv()
@@ -193,6 +194,43 @@ def fetch_and_store_transactions(db: Session, decrypted_access_token: str):
                 date=tx_date,
             )
             db.add(new_tx)
+            
+            #Handle category linking
+            if t.get("category"):
+                # Extract the first part of the category
+                category_name = t["category"][0] if t["category"] else None
+
+                if category_name:
+                    # Check if the user already has a category with this name
+                    bank_account = db.query(Plaid_Bank_Account).filter_by(account_id=t["account_id"]).first()
+                    if not bank_account:
+                        continue
+
+                    user_id = bank_account.user_id
+                    user_category = (
+                        db.query(User_Categories)
+                        .filter_by(user_id=user_id, name=category_name)
+                        .first()
+                    )
+
+                    # If the category doesn't exist, create it
+                    if not user_category:
+                        try:
+                            category_data = UserCategoryCreate(name=category_name, color="#000000", weekly_limit=None)
+                            user_category = create_user_category(user_id, category_data, db)
+                        except HTTPException:
+                            continue  # Skip this transaction and proceed to the next one
+
+                    # Ensure user_category is a valid object with an 'id'
+                    if not hasattr(user_category, 'id'):
+                        continue
+
+                    # Create a Transaction_Category_Link
+                    category_link = Transaction_Category_Link(
+                        transaction_id=new_tx.transaction_id,
+                        category_id=user_category.id,
+                    )
+                    db.add(category_link)
         db.commit()
     except Exception as e:
         print("Error importing transactions:", e)

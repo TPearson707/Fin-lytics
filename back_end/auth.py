@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
 from pydantic import BaseModel
@@ -150,7 +150,7 @@ async def update_user(user: Annotated[dict, Depends(get_current_user)],
 #Generates a verification token
 def generate_verification_token(email: str) -> str:
     expires_delta = timedelta(hours=24)
-    encode = {'sub': email, 'exp': datetime.now(UTC) + expires_delta}
+    encode = {'sub': email, 'exp': datetime.now(timezone.utc) + expires_delta}
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
 
 #Verifies the verification token
