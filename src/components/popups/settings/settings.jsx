@@ -103,21 +103,41 @@ const SettingsBlock = () => {
     // Handle successful Plaid Link connection
     const onSuccess = useCallback(async (publicToken, metadata) => {
         try {
-        const token = localStorage.getItem("token");
-        await axios.post(
-            "http://localhost:8000/exchange_public_token/",
-            { public_token: publicToken },
-            {
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true,
+            const token = localStorage.getItem("token");
+            await axios.post(
+                "http://localhost:8000/exchange_public_token/",
+                { 
+                    public_token: publicToken,
+                    account_type: "bank"
+                },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    withCredentials: true,
+                }
+            );
+            setIsLoggedIn(true);
+            
+            // Fetch investment data after successful Plaid connection
+            try {
+                await axios.get(
+                    "http://localhost:8000/investments/",
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                        withCredentials: true,
+                    }
+                );
+                
+            } catch (error) {
+                console.error(
+                    "Error importing investment data:",
+                    error.response ? error.response.data : error
+                );
             }
-        );
-        setIsLoggedIn(true);
         } catch (error) {
-        console.error(
-            "Error exchanging public token:",
-            error.response ? error.response.data : error
-        );
+            console.error(
+                "Error exchanging public token:",
+                error.response ? error.response.data : error
+            );
         }
     }, []);
 
@@ -336,6 +356,59 @@ const NotificationSettings = ({ settings, onToggleChange }) => {
 };
 
 const FinanceSettings = ({ isLoggedIn, linkToken, open, ready, setIsLoggedIn }) => {
+    const [brokerageLinkToken, setBrokerageLinkToken] = useState(null);
+    const [isBrokerageConnected, setIsBrokerageConnected] = useState(false);
+    
+    // Fetch brokerage link token
+    useEffect(() => {
+        const fetchBrokerageLinkToken = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const response = await axios.post(
+                    "http://localhost:8000/create_link_token/",
+                    { product: "investments" },
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                        withCredentials: true,
+                    }
+                );
+                setBrokerageLinkToken(response.data.link_token);
+            } catch (error) {
+                console.error(
+                    "Error fetching brokerage link token:", 
+                    error.response ? error.response.data : error
+                );
+            }
+        };
+        
+        if (isLoggedIn) {
+            fetchBrokerageLinkToken();
+        }
+    }, [isLoggedIn]);
+    
+    // Check if brokerage is connected
+    useEffect(() => {
+        const checkBrokerageStatus = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                await axios.get(
+                    "http://localhost:8000/investments/",
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                        withCredentials: true,
+                    }
+                );
+                setIsBrokerageConnected(true);
+            } catch (error) {
+                setIsBrokerageConnected(false);
+            }
+        };
+        
+        if (isLoggedIn) {
+            checkBrokerageStatus();
+        }
+    }, [isLoggedIn]);
+    
     // Merge Item: Function to call the unlink endpoint
     const handleUnlink = async () => {
         try {
@@ -345,6 +418,7 @@ const FinanceSettings = ({ isLoggedIn, linkToken, open, ready, setIsLoggedIn }) 
             withCredentials: true,
         });
         setIsLoggedIn(false);
+        setIsBrokerageConnected(false);
         } catch (error) {
         console.error(
             "Error unlinking Plaid account:",
@@ -352,6 +426,75 @@ const FinanceSettings = ({ isLoggedIn, linkToken, open, ready, setIsLoggedIn }) 
         );
         }
     };
+    
+    // Function to connect brokerage account
+    const handleConnectBrokerage = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            await axios.get(
+                "http://localhost:8000/investments/",
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                    withCredentials: true,
+                }
+            );
+            setIsBrokerageConnected(true);
+        } catch (error) {
+            console.error(
+                "Error connecting brokerage account:",
+                error.response ? error.response.data : error
+            );
+            alert("Error connecting brokerage account. Please try again later.");
+        }
+    };
+    
+    // Configuration for brokerage Plaid Link
+    const brokerageConfig = brokerageLinkToken
+        ? {
+              token: brokerageLinkToken,
+              onSuccess: async (publicToken, metadata) => {
+                  try {
+                      const token = localStorage.getItem("token");
+                      await axios.post(
+                          "http://localhost:8000/exchange_public_token/",
+                          { 
+                              public_token: publicToken,
+                              account_type: "brokerage"
+                          },
+                          {
+                              headers: { Authorization: `Bearer ${token}` },
+                              withCredentials: true,
+                          }
+                      );
+                      setIsBrokerageConnected(true);
+                      
+                      // Fetch investment data after successful brokerage connection
+                      try {
+                          await axios.get(
+                              "http://localhost:8000/investments/",
+                              {
+                                  headers: { Authorization: `Bearer ${token}` },
+                                  withCredentials: true,
+                              }
+                          );
+                          console.log("Investment data imported successfully");
+                      } catch (error) {
+                          console.error(
+                              "Error importing investment data:",
+                              error.response ? error.response.data : error
+                          );
+                      }
+                  } catch (error) {
+                      console.error(
+                          "Error exchanging public token:",
+                          error.response ? error.response.data : error
+                      );
+                  }
+              },
+          }
+        : null;
+    
+    const { open: openBrokerage, ready: brokerageReady } = usePlaidLink(brokerageConfig || {});
     
     return (
         <div className="settings-section">
@@ -365,6 +508,20 @@ const FinanceSettings = ({ isLoggedIn, linkToken, open, ready, setIsLoggedIn }) 
             <img src={plaidLogo} alt="Plaid Logo" className="plaid-logo" />
             {isLoggedIn ? "Unlink Plaid" : "Log into Plaid"}
         </button>
+        
+        {isLoggedIn && (
+            <div className="investment-actions">
+                <h4>Connect Brokerage Account</h4>
+                <button 
+                    onClick={isBrokerageConnected ? handleConnectBrokerage : () => openBrokerage()}
+                    disabled={!brokerageReady && !isBrokerageConnected}
+                    className="brokerage-button"
+                >
+                    <img src={plaidLogo} alt="Plaid Logo" className="plaid-logo" />
+                    {isBrokerageConnected ? "Refresh Brokerage Data" : "Connect Brokerage"}
+                </button>
+            </div>
+        )}
     </div>
     );
 };

@@ -1,12 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import Annotated
 from database import SessionLocal
 from models import Settings
 from auth import get_current_user
 from pydantic import BaseModel
 from polygon import RESTClient
-from pydantic import BaseModel
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -15,36 +13,23 @@ router = APIRouter(
     prefix='/stocks',
     tags=['stocks']
 )
-polygonapi = RESTClient("POLYGON_API_KEY")#polygon api key goes here
 
 
-# Dependency to get the database session
+polygonapi = RESTClient("POLYGON_API_KEY") 
+
+
 def get_db():
     db = SessionLocal()
-    try:                # Try to get db
+    try:
         yield db
     finally:
-        db.close()      # Regardless of success, close db
+        db.close()
 
 
-# 
-# 
-#model for get last quote
-class Stockrequest(BaseModel):
+class StockRequest(BaseModel):
     ticker: str
 
-
-@router.get("/getlastquote", status_code=status.HTTP_200_OK)
-async def get_lastquote(data: Stockrequest):
-    try:
-        quote = polygonapi.get_last_quote(data.ticker)
-        return quote
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-
-class Stockcustombars(BaseModel):
+class StockCustomBars(BaseModel):
     tick: str
     multiplier: int
     timeframe: str
@@ -54,24 +39,69 @@ class Stockcustombars(BaseModel):
     sort: str
     limit: int
 
+# WebSocket endpoint for retrieving the last quote.
+@router.websocket("/ws/getlastquote")
+async def websocket_lastquote(websocket: WebSocket):
 
-@router.get("/getCustomBars", status_code=status.HTTP_200_OK)
-async def get_CustomBars(data: Stockcustombars):
+    await websocket.accept()
     try:
-        custombars = polygonapi.list_aggs(
-            data.tick,
-            data.multiplier,
-            data.timeframe,
-            data.From,
-            data.To,
-            data.adjusted,
-            data.sort,
-            data.limit
-        )
 
-        return custombars
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        while True:
+            data = await websocket.receive_json()
+
+            try:
+                request = StockRequest(**data)
+            except Exception as validation_error:
+                await websocket.send_json({"error": "Invalid data format", "detail": str(validation_error)})
+                continue
+
+
+            try:
+                quote = polygonapi.get_last_quote(request.ticker)
+
+                await websocket.send_json(quote)
+            except Exception as api_error:
+
+                await websocket.send_json({"error": "Failed to fetch quote", "detail": str(api_error)})
+    except WebSocketDisconnect:
+
+        print("Client disconnected from /ws/getlastquote")
+
+
+@router.websocket("/ws/getcustombars")
+async def websocket_custombars(websocket: WebSocket):
+
+    await websocket.accept()
+    try:
+        while True:
+
+            data = await websocket.receive_json()
+
+            try:
+                request = StockCustomBars(**data)
+            except Exception as validation_error:
+                await websocket.send_json({"error": "Invalid data format", "detail": str(validation_error)})
+                continue
+
+            try:
+                custombars = polygonapi.list_aggs(
+                    request.tick,
+                    request.multiplier,
+                    request.timeframe,
+                    request.From,
+                    request.To,
+                    request.adjusted,
+                    request.sort,
+                    request.limit
+                )
+                await websocket.send_json(custombars)
+            except Exception as api_error:
+                await websocket.send_json({"error": "Failed to fetch custom bars", "detail": str(api_error)})
+    except WebSocketDisconnect:
+        print("Client disconnected from /ws/getcustombars")
+
+
+
 
 
 

@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks, status
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from cryptography.fernet import Fernet
@@ -17,10 +17,12 @@ from database import SessionLocal
 from models import Users
 from auth import get_current_user
 from dotenv import load_dotenv
-from models import Users, Plaid_Bank_Account, Plaid_Transactions, User_Categories, Transaction_Category_Link
+from models import Users, Plaid_Bank_Account, Plaid_Transactions, User_Categories, Transaction_Category_Link, Plaid_Investment, Plaid_Investment_Holding
 from datetime import datetime, timedelta
 from datetime import date
 from user_categories import create_user_category, UserCategoryCreate
+import requests
+import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -64,6 +66,7 @@ def decrypt_token(encrypted_token: str) -> str:
 # Pydantic Model for Public Token Request
 class PublicTokenRequest(BaseModel):
     public_token: str
+    account_type: str  # "bank" or "brokerage"
 
 @router.post("/create_link_token")
 async def create_link_token(user: dict = Depends(get_current_user)):
@@ -76,7 +79,7 @@ async def create_link_token(user: dict = Depends(get_current_user)):
             "secret": PLAID_SECRET,
             "user": {"client_user_id": str(user["id"])},
             "client_name": "MyApp",
-            "products": [Products("auth"), Products("transactions")],
+            "products": [Products("auth"), Products("transactions"), Products("investments")],
             "country_codes": [CountryCode("US")],
             "language": "en",
         }
@@ -86,8 +89,6 @@ async def create_link_token(user: dict = Depends(get_current_user)):
         return response.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 def fetch_and_store_accounts(user_id: int):
     """Background task to fetch Plaid accounts for this user and store them in Plaid_Bank_Account."""
@@ -143,6 +144,9 @@ def fetch_and_store_accounts(user_id: int):
         # 4) Now fetch transactions for these accounts
         #    You can fetch them in one call or multiple calls per account.
         fetch_and_store_transactions(db, decrypted_access_token)
+        
+        # 5) Fetch investment data
+        fetch_and_store_investments(db, decrypted_access_token, user_id)
 
     except Exception as e:
         print("Error fetching/storing accounts:", e)
@@ -242,7 +246,7 @@ async def exchange_public_token(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
-    """Exchange a public token for an access token, store it, and automatically import transactions."""
+    """Exchange a public token for an access token, store it, and automatically import data."""
     try:
         exchange_request = ItemPublicTokenExchangeRequest(
             client_id=PLAID_CLIENT_ID,
@@ -260,15 +264,25 @@ async def exchange_public_token(
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        db_user.plaid_access_token = encrypted_access_token
+        # Store token based on account type
+        if request.account_type == "brokerage":
+            db_user.plaid_brokerage_access_token = encrypted_access_token
+        else:  # bank
+            db_user.plaid_access_token = encrypted_access_token
+        
         db.commit()
 
-        # Schedule the transactions import as a background task
-        background_tasks.add_task(fetch_and_store_accounts, user["id"])
+        # Schedule the appropriate data import as a background task
+        if request.account_type == "brokerage":
+            background_tasks.add_task(fetch_and_store_investments, user["id"])
+        else:  # bank
+            background_tasks.add_task(fetch_and_store_accounts, user["id"])
 
-        return {"message": "Plaid access token stored and transactions import scheduled"}
+        return {"status": "success", "message": f"{request.account_type.capitalize()} account connected successfully"}
+
+    except PlaidError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        print(f"Plaid API Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -284,7 +298,6 @@ async def get_accounts(
 
         # Decrypt the stored Plaid token
         decrypted_access_token = decrypt_token(db_user.plaid_access_token)
-        #print(f"Decrypted token: {decrypted_access_token}")
 
         # Create a request object including client_id and secret
         request_obj = AccountsGetRequest(
@@ -292,42 +305,360 @@ async def get_accounts(
             secret=PLAID_SECRET,
             access_token=decrypted_access_token
         )
-        #print(f"Plaid Request: {request_obj}")
 
         # Call the accounts_get endpoint on the client
         response = client.accounts_get(request_obj)
-        #print(f"Plaid Response: {response}")
-
         return response.to_dict()
     except Exception as e:
-        #print("Error in /accounts:", repr(e))
-        #if hasattr(e, "body"):
-            #print("Error body:", e.body)
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@router.post("/refresh_bank_data", status_code=status.HTTP_200_OK)
+async def refresh_bank_data(
+    db: Session = Depends(get_db), 
+    user: dict = Depends(get_current_user)
+):
+    """
+    Refreshes the user's bank account and transaction data from Plaid.
+    This endpoint will:
+      - Re-fetch and update bank account information in Plaid_Bank_Account.
+      - Re-fetch and insert new transactions in Plaid_Transactions (for the past 30 days).
+    """
+    db_user = db.query(Users).filter(Users.id == user["id"]).first()
+    if not db_user or not db_user.plaid_access_token:
+        raise HTTPException(status_code=400, detail="Plaid account not linked.")
+
+    # Decrypt the stored Plaid token
+    decrypted_access_token = decrypt_token(db_user.plaid_access_token)
+
+    # Refresh Bank Accounts
+    try:
+        accounts_request = AccountsGetRequest(
+            client_id=PLAID_CLIENT_ID,
+            secret=PLAID_SECRET,
+            access_token=decrypted_access_token
+        )
+        accounts_response = client.accounts_get(accounts_request)
+        accounts_data = accounts_response.to_dict().get("accounts", [])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching accounts: {str(e)}")
+
+    for acc in accounts_data:
+        # Upsert account record based on the unique account_id
+        existing_account = (
+            db.query(Plaid_Bank_Account)
+            .filter(Plaid_Bank_Account.account_id == acc["account_id"])
+            .first()
+        )
+        if existing_account:
+            # Update account details
+            existing_account.name = acc["name"]
+            existing_account.type = acc["type"]
+            existing_account.subtype = acc.get("subtype")
+            existing_account.current_balance = acc["balances"].get("current")
+            existing_account.available_balance = acc["balances"].get("available")
+            existing_account.currency = acc["balances"].get("iso_currency_code")
+        else:
+            new_account = Plaid_Bank_Account(
+                user_id=user["id"],
+                account_id=acc["account_id"],
+                name=acc["name"],
+                type=acc["type"],
+                subtype=acc.get("subtype"),
+                current_balance=acc["balances"].get("current"),
+                available_balance=acc["balances"].get("available"),
+                currency=acc["balances"].get("iso_currency_code")
+            )
+            db.add(new_account)
+    db.commit()
+
+    # Refresh Transactions (for the past 30 days)
+    try:
+        end_date = datetime.now().date()
+        start_date = (datetime.now() - timedelta(days=30)).date()
+        transactions_request = TransactionsGetRequest(
+            client_id=PLAID_CLIENT_ID,
+            secret=PLAID_SECRET,
+            access_token=decrypted_access_token,
+            start_date=start_date,
+            end_date=end_date
+        )
+        transactions_response = client.transactions_get(transactions_request)
+        transactions_data = transactions_response.to_dict().get("transactions", [])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching transactions: {str(e)}")
+
+    for t in transactions_data:
+        existing_tx = (
+            db.query(Plaid_Transactions)
+            .filter(Plaid_Transactions.transaction_id == t["transaction_id"])
+            .first()
+        )
+        if existing_tx:
+            # Optionally update the transaction if necessary.
+            continue
+
+        # Parse the transaction date if it is a string
+        try:
+            if isinstance(t["date"], str):
+                tx_date = datetime.strptime(t["date"], "%Y-%m-%d").date()
+            else:
+                tx_date = t["date"]
+        except Exception:
+            tx_date = None
+
+        new_tx = Plaid_Transactions(
+            transaction_id=t["transaction_id"],
+            account_id=t["account_id"],  # This FK references Plaid_Bank_Account.account_id
+            amount=t["amount"],
+            currency=t.get("iso_currency_code"),
+            category=", ".join(t["category"]) if t.get("category") else None,
+            merchant_name=t.get("merchant_name"),
+            date=tx_date
+        )
+        db.add(new_tx)
+    db.commit()
+
+    return {"message": "Bank accounts and transactions refreshed successfully."}
 
 @router.delete("/unlink")
 async def unlink_plaid(
     db: Session = Depends(get_db),
     user: dict = Depends(get_current_user)
 ):
-    """Remove the stored Plaid token and delete all bank accounts and transaction data for the current user."""
-    db_user = db.query(Users).filter(Users.id == user["id"]).first()
-    if not db_user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Clear the Plaid access token
-    db_user.plaid_access_token = None
+    """Remove the stored Plaid token and delete all Plaid-related data for the current user."""
+    try:
+        db_user = db.query(Users).filter(Users.id == user["id"]).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Clear the Plaid access token
+        db_user.plaid_access_token = None
 
-    # Delete all associated bank accounts (transactions will be deleted by cascade)
-    # If the relationship in Users is defined with cascade="all, delete-orphan"
-    # then you can simply clear the relationship:
-    db_user.bank_accounts = []
+        # Delete all bank accounts and their associated transactions
+        # (transactions will be deleted by cascade)
+        db.query(Plaid_Bank_Account).filter(
+            Plaid_Bank_Account.user_id == user["id"]
+        ).delete(synchronize_session=False)
 
-    # Alternatively, if you prefer to delete explicitly:
-    # for account in db_user.bank_accounts:
-    #     db.delete(account)
+        # Delete all investment accounts and their associated holdings
+        # (holdings will be deleted by cascade)
+        db.query(Plaid_Investment).filter(
+            Plaid_Investment.user_id == user["id"]
+        ).delete(synchronize_session=False)
+
+        # Delete any orphaned transaction category links
+        db.query(Transaction_Category_Link).filter(
+            Transaction_Category_Link.transaction_id.in_(
+                db.query(Plaid_Transactions.transaction_id).filter(
+                    Plaid_Transactions.account_id.in_(
+                        db.query(Plaid_Bank_Account.account_id).filter(
+                            Plaid_Bank_Account.user_id == user["id"]
+                        )
+                    )
+                )
+            )
+        ).delete(synchronize_session=False)
+
+        db.commit()
+        
+        return {
+            "message": "Plaid access token and all associated data (bank accounts, transactions, investments, and holdings) deleted. Please re-link your account."
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error unlinking Plaid account: {str(e)}"
+        )
+
+def fetch_and_store_investments(db: Session, decrypted_access_token: str, user_id: int):
+    """Fetch investment accounts and holdings from Plaid and store them in the database."""
+    try:
+        # 1. Get investment accounts
+        accounts_request = AccountsGetRequest(
+            client_id=PLAID_CLIENT_ID,
+            secret=PLAID_SECRET,
+            access_token=decrypted_access_token
+        )
+        accounts_response = client.accounts_get(accounts_request)
+        accounts_data = accounts_response.to_dict()
+        
+        # Filter for investment accounts
+        investment_accounts = [acc for acc in accounts_data.get("accounts", []) if acc.get("type") == "investment"]
+        
+        for acc in investment_accounts:
+            # Check if this investment account already exists
+            existing_account = (
+                db.query(Plaid_Investment)
+                .filter_by(account_id=acc["account_id"])
+                .first()
+            )
+            
+            if existing_account:
+                # Update account details
+                existing_account.name = acc["name"]
+                existing_account.type = acc["type"]
+                existing_account.subtype = acc.get("subtype")
+                existing_account.current_balance = acc["balances"].get("current")
+                existing_account.available_balance = acc["balances"].get("available")
+                existing_account.currency = acc["balances"].get("iso_currency_code")
+            else:
+                # Create a new investment account record
+                new_account = Plaid_Investment(
+                    user_id=user_id,
+                    account_id=acc["account_id"],
+                    name=acc["name"],
+                    type=acc["type"],
+                    subtype=acc.get("subtype"),
+                    current_balance=acc["balances"].get("current"),
+                    available_balance=acc["balances"].get("available"),
+                    currency=acc["balances"].get("iso_currency_code"),
+                )
+                db.add(new_account)
+        
+        db.commit()
+        
+        # 2. Get holdings and securities using direct REST API calls
+        headers = {
+            'Content-Type': 'application/json',
+            'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
+            'PLAID-SECRET': PLAID_SECRET,
+        }
+        
+        payload = {
+            'client_id': PLAID_CLIENT_ID,
+            'secret': PLAID_SECRET,
+            'access_token': decrypted_access_token
+        }
+        
+        # Get holdings and securities data
+        securities_response = requests.post(
+            f'https://{PLAID_ENVIRONMENT}.plaid.com/investments/holdings/get',
+            headers=headers,
+            json=payload
+        )
+        
+        if securities_response.status_code == 200:
+            holdings_data = securities_response.json()
+            holdings = holdings_data.get('holdings', [])
+            securities = holdings_data.get('securities', [])
+            
+            # Create a map of security_id to security details
+            securities_map = {
+                security['security_id']: {
+                    'name': security.get('name', ''),
+                    'ticker_symbol': security.get('ticker_symbol', ''),
+                    'type': security.get('type', '')
+                }
+                for security in securities
+            }
+            
+            # Process holdings
+            for holding in holdings:
+                security_id = holding.get('security_id')
+                security = securities_map.get(security_id, {})
+                
+                # Check if this holding already exists
+                existing_holding = (
+                    db.query(Plaid_Investment_Holding)
+                    .filter_by(
+                        account_id=holding['account_id'],
+                        security_id=security_id
+                    )
+                    .first()
+                )
+                
+                holding_data = {
+                    'quantity': float(holding.get('quantity', 0)),
+                    'price': float(holding.get('institution_price', 0)),
+                    'value': float(holding.get('institution_value', 0)),
+                    'currency': holding.get('iso_currency_code'),
+                    'symbol': security.get('ticker_symbol', ''),
+                    'name': security.get('name', '')
+                }
+                
+                if existing_holding:
+                    # Update holding details
+                    for key, value in holding_data.items():
+                        setattr(existing_holding, key, value)
+                else:
+                    # Create a new holding record
+                    new_holding = Plaid_Investment_Holding(
+                        holding_id=f"{holding['account_id']}_{security_id}",
+                        account_id=holding['account_id'],
+                        security_id=security_id,
+                        **holding_data
+                    )
+                    db.add(new_holding)
+            
+            db.commit()
+                
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error fetching investment data: {str(e)}")
+
+
+@router.get("/investments")
+async def get_investments(
+    db: Session = Depends(get_db),
+    user: dict = Depends(get_current_user)
+):
+    """
+    Fetch and return the user's investment accounts and holdings from Plaid.
+    This endpoint will:
+    1. Get all investment accounts
+    2. Get all holdings for each investment account
+    3. Return the data in a structured format
+    """
+    try:
+        # Get user's Plaid access token
+        db_user = db.query(Users).filter(Users.id == user["id"]).first()
+        if not db_user or not db_user.plaid_access_token:
+            raise HTTPException(status_code=400, detail="No Plaid account linked")
+        
+        # Decrypt the stored Plaid token
+        decrypted_access_token = decrypt_token(db_user.plaid_access_token)
+        
+        # Fetch and store investment data
+        fetch_and_store_investments(db, decrypted_access_token, user["id"])
+        
+        # Retrieve the stored investment data
+        investment_accounts = db.query(Plaid_Investment).filter(Plaid_Investment.user_id == user["id"]).all()
+        
+        result = []
+        for account in investment_accounts:
+            account_data = {
+                "account_id": account.account_id,
+                "name": account.name,
+                "type": account.type,
+                "subtype": account.subtype,
+                "current_balance": account.current_balance,
+                "available_balance": account.available_balance,
+                "currency": account.currency,
+                "holdings": []
+            }
+            
+            # Get holdings for this account
+            holdings = db.query(Plaid_Investment_Holding).filter(
+                Plaid_Investment_Holding.account_id == account.account_id
+            ).all()
+            
+            for holding in holdings:
+                holding_data = {
+                    "holding_id": holding.holding_id,
+                    "security_id": holding.security_id,
+                    "symbol": holding.symbol,
+                    "name": holding.name,
+                    "quantity": holding.quantity,
+                    "price": holding.price,
+                    "value": holding.value,
+                    "currency": holding.currency
+                }
+                account_data["holdings"].append(holding_data)
+            
+            result.append(account_data)
+        
+        return {"investments": result}
     
-    db.commit()
-    
-    return {"message": "Plaid access token and all associated bank accounts and transactions deleted. Please re-link your account."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
