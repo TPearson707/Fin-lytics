@@ -28,7 +28,7 @@ def get_total_expenses_per_category(user_id: int, db: Session):
 
     for category in categories:
         transactions = db.query(Plaid_Transactions).join(Transaction_Category_Link).filter(Transaction_Category_Link.category_id == category["id"]).all()
-        total_expense = sum(transaction.amount for transaction in transactions)
+        total_expense = sum(abs(transaction.amount) for transaction in transactions)
         category_expenses[category["name"]] = total_expense
 
     return category_expenses
