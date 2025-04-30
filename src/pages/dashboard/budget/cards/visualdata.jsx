@@ -42,15 +42,25 @@ const VisualCard = () => {
     }).catch((error) => console.error("Error fetching data:", error));
     };
 
+    const updatePieChartData = () => {
+        axios.put("http://localhost:8000/pie_chart/", {
+            // Update the data as needed
+        }).then((response) => {
+            console.log("Data updated successfully:", response.data);
+        }).catch((error) => console.error("Error updating data:", error));
+    }
+
     // useEffect to fetch data when the component mounts
     useEffect(() => {
         // Initial data fetch
         fetchPieChartData();
 
         // Set up an interval to fetch data every 60 seconds (adjust as needed)
-        const POLL_INTERVAL_SECONDS = 5;
+        const POLL_INTERVAL_SECONDS = 60;
         
         const interval = setInterval(() => {
+            // Update the pie chart data and fetch new data
+            updatePieChartData();
             fetchPieChartData();
         }, POLL_INTERVAL_SECONDS * 1000); // fetch data every POLL_INTERVAL_SECONDS
 
