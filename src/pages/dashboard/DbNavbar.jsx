@@ -25,6 +25,11 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
     //     navigate("/");
     // };
 
+    const handleLogout = () => {
+        localStorage.removeItem("token"); 
+        window.location.href = "/login"; 
+    };
+
     const getUser = async () => {
         try {
             const token = localStorage.getItem("token");

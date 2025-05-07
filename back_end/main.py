@@ -12,6 +12,8 @@ import user_settings
 import user_categories
 import stock_routes
 import pie_chart
+import user_balances
+import user_transactions
 
 app = FastAPI()
 
@@ -36,6 +38,8 @@ app.include_router(user_settings.router)
 app.include_router(user_categories.router)
 app.include_router(stock_routes.router)
 app.include_router(pie_chart.router)
+app.include_router(user_balances.router)
+app.include_router(user_transactions.router)
 
 
 # Create MySQL tables (make sure this is called at least once)

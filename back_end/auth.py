@@ -108,18 +108,34 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
 
 async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)], db: db_dependency):
     """Retrieves the currently authenticated user from the token."""
+   #this isnt working rn for some reason :( 
     try:
+        print("Token received:", token)  # Debug: Print the token
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print("Decoded payload:", payload)  # Debug: Print the decoded payload
         username, user_id = payload.get('sub'), payload.get('id')
         if username is None or user_id is None:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
+            print("Validation failed: Missing username or user_id")  # Debug
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail='Could not validate user',
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         user = db.query(Users).filter(Users.id == user_id).first()
         if not user or not user.is_verified:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email not verified")
+            print("Validation failed: User not found or not verified")  # Debug
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email not verified"
+            )
         return {'first_name': user.first_name, 'last_name': user.last_name, 'username': user.username, 'id': user.id}
-    except JWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate user')
-
+    except JWTError as e:
+        print("JWT Error:", str(e))  # Debug: Print the JWT error
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail='Could not validate user',
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 #Lilly: Trying to make endpoint to call for updating user info via account settings
 class UpdateUserRequest(BaseModel):

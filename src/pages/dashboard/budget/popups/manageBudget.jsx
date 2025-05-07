@@ -62,14 +62,17 @@ const ManageBudgets = ({ onClose }) => {
                     <h3>Annual Savings Goal:</h3>
                     
                     <div className="budget-table">
-                        <thead>
+                        <table>
+                            <thead>
                             <tr>
                                 <th>Annual Goal</th>
                                 <th>Working</th>
                                 <th>Remainder</th>
                                 <th>Edit</th>
                             </tr>
-                        </thead>
+                            </thead>
+                        </table>
+                        
                         <tbody>
                             <tr>
                             {isEditingAnnual ? (

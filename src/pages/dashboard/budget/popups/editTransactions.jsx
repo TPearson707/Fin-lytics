@@ -1,22 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import "./editTran.scss";
 
 const EditTransactions = ({ onClose }) => {
-    const [transactions] = useState([
-        { id: 1, name: "Groceries", amount: 50, date: "1/1/2025" },
-        { id: 2, name: "Utilities", amount: 100, date: "2/2/2025" },
-        { id: 3, name: "Rent", amount: 1200, date: "3/3/2025" },
-        { id: 4, name: "Entertainment", amount: 150, date: "4/4/2025" },
-        { id: 5, name: "Rent", amount: 1200, date: "6/6/2025" },
-        { id: 6, name: "Dining", amount: 75, date: "7/7/2025" },
-        { id: 7, name: "Shopping", amount: 200, date: "8/8/2025" },
-        { id: 8, name: "Fuel", amount: 60, date: "9/9/2025" },
-    ]);
-
+    const [transactions, setTransactions] = useState([]);
     const [currentPage, setCurrentPage] = useState(0);
     const itemsPerPage = 5;
 
     const totalPages = Math.ceil(transactions.length / itemsPerPage);
+
+    useEffect(() => {
+        const fetchTransactions = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const response = await axios.get("http://localhost:8000/user_transactions/", {
+                    headers: { Authorization: `Bearer ${token}` },
+                    withCredentials: true,
+                });
+
+                const { db_transactions } = response.data;
+                setTransactions(db_transactions);
+            } catch (error) {
+                console.error("Error fetching transactions:", error.response ? error.response.data : error);
+            }
+        };
+
+        fetchTransactions();
+    }, []);
 
     const handleNextPage = () => {
         if (currentPage < totalPages - 1) {
@@ -49,10 +59,10 @@ const EditTransactions = ({ onClose }) => {
                     <div className="transaction-list">
                         <ul>
                             {paginatedTransactions.map((transaction) => (
-                                <li key={transaction.id} className="transaction-item">
+                                <li key={transaction.transaction_id} className="transaction-item">
                                     <div className="transaction-row">
                                         <span className="transaction-date">{transaction.date}</span>
-                                        <span className="transaction-name">{transaction.name}</span>
+                                        <span className="transaction-name">{transaction.merchant_name || transaction.category}</span>
                                         <span className="transaction-amount">
                                             ${transaction.amount.toFixed(2)}
                                         </span>
