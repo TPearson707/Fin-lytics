@@ -98,3 +98,48 @@
         }
     }
 }
+
+.myaccounts-card {
+    .card-content {
+        .card-body {
+            li {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 8px 0;
+                margin-bottom: 4px;
+                background-color: transparent;
+
+                .balance-edit {
+                    input {
+                        text-align: right;
+                        width: 120px;
+                        padding: 4px 8px;
+                        border: 1px solid #ddd;
+                        border-radius: 4px;
+                    }
+                }
+            }
+
+            .balance-actions {
+                margin-top: 16px;
+                display: flex;
+                gap: 8px;
+                justify-content: flex-end;
+
+                button {
+                    font: inherit;
+                    padding: 5px 10px;
+                    background-color: transparent;
+                    border: none;
+                    color: #313531;
+
+                    &:hover {
+                        color: #54695d;
+                        cursor: pointer;
+                    }
+                }
+            }
+        }
+    }
+}
