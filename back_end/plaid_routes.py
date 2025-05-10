@@ -188,55 +188,57 @@ def fetch_and_store_transactions(db: Session, decrypted_access_token: str):
                 else datetime.strptime(t["date"], "%Y-%m-%d").date()
             )
 
+            # Get category from personal_finance_category if available
+            category = None
+            if t.get("personal_finance_category"):
+                category = t["personal_finance_category"].get("primary")
+            elif t.get("category"):
+                category = t["category"][0] if t["category"] else None 
+
             new_tx = Plaid_Transactions(
                 transaction_id=t["transaction_id"],
                 account_id=t["account_id"],  # references Plaid_Bank_Account.account_id
                 amount=t["amount"],
                 currency=t.get("iso_currency_code"),
-                category=", ".join(t["category"]) if t.get("category") else None,
+                category=category,
                 merchant_name=t.get("merchant_name"),
                 date=tx_date,
             )
             db.add(new_tx)
+            db.flush()  # Flush to get the transaction ID
             
-            #Handle category linking
-            if t.get("category"):
-                # Extract the first part of the category
-                category_name = t["category"][0] if t["category"] else None
+            # Handle category linking
+            if category:
+                # Check if the user already has a category with this name
+                bank_account = db.query(Plaid_Bank_Account).filter_by(account_id=t["account_id"]).first()
+                if not bank_account:
+                    continue
 
-                if category_name:
-                    # Check if the user already has a category with this name
-                    bank_account = db.query(Plaid_Bank_Account).filter_by(account_id=t["account_id"]).first()
-                    if not bank_account:
-                        continue
+                user_id = bank_account.user_id
+                user_category = (
+                    db.query(User_Categories)
+                    .filter_by(user_id=user_id, name=category)
+                    .first()
+                )
 
-                    user_id = bank_account.user_id
-                    user_category = (
-                        db.query(User_Categories)
-                        .filter_by(user_id=user_id, name=category_name)
-                        .first()
-                    )
+                # If the category doesn't exist, create it
+                if not user_category:
+                    try:
+                        category_data = UserCategoryCreate(name=category, color="#000000", weekly_limit=None)
+                        user_category = create_user_category(user_id, category_data, db)
+                        db.flush()  # Flush to get the category ID
+                    except HTTPException:
+                        continue  # Skip this transaction and proceed to the next one
 
-                    # If the category doesn't exist, create it
-                    if not user_category:
-                        try:
-                            category_data = UserCategoryCreate(name=category_name, color="#000000", weekly_limit=None)
-                            user_category = create_user_category(user_id, category_data, db)
-                        except HTTPException:
-                            continue  # Skip this transaction and proceed to the next one
-
-                    # Ensure user_category is a valid object with an 'id'
-                    if not hasattr(user_category, 'id'):
-                        continue
-
-                    # Create a Transaction_Category_Link
-                    category_link = Transaction_Category_Link(
-                        transaction_id=new_tx.transaction_id,
-                        category_id=user_category.id,
-                    )
-                    db.add(category_link)
+                # Create a Transaction_Category_Link
+                category_link = Transaction_Category_Link(
+                    transaction_id=new_tx.transaction_id,
+                    category_id=user_category.id,
+                )
+                db.add(category_link)
         db.commit()
     except Exception as e:
+        db.rollback()
         print("Error importing transactions:", e)
 
 @router.post("/exchange_public_token")
@@ -324,102 +326,147 @@ async def refresh_bank_data(
       - Re-fetch and update bank account information in Plaid_Bank_Account.
       - Re-fetch and insert new transactions in Plaid_Transactions (for the past 30 days).
     """
-    db_user = db.query(Users).filter(Users.id == user["id"]).first()
-    if not db_user or not db_user.plaid_access_token:
-        raise HTTPException(status_code=400, detail="Plaid account not linked.")
-
-    # Decrypt the stored Plaid token
-    decrypted_access_token = decrypt_token(db_user.plaid_access_token)
-
-    # Refresh Bank Accounts
     try:
-        accounts_request = AccountsGetRequest(
-            client_id=PLAID_CLIENT_ID,
-            secret=PLAID_SECRET,
-            access_token=decrypted_access_token
-        )
-        accounts_response = client.accounts_get(accounts_request)
-        accounts_data = accounts_response.to_dict().get("accounts", [])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching accounts: {str(e)}")
+        db_user = db.query(Users).filter(Users.id == user["id"]).first()
+        if not db_user or not db_user.plaid_access_token:
+            raise HTTPException(status_code=400, detail="Plaid account not linked.")
 
-    for acc in accounts_data:
-        # Upsert account record based on the unique account_id
-        existing_account = (
-            db.query(Plaid_Bank_Account)
-            .filter(Plaid_Bank_Account.account_id == acc["account_id"])
-            .first()
-        )
-        if existing_account:
-            # Update account details
-            existing_account.name = acc["name"]
-            existing_account.type = acc["type"]
-            existing_account.subtype = acc.get("subtype")
-            existing_account.current_balance = acc["balances"].get("current")
-            existing_account.available_balance = acc["balances"].get("available")
-            existing_account.currency = acc["balances"].get("iso_currency_code")
-        else:
-            new_account = Plaid_Bank_Account(
-                user_id=user["id"],
-                account_id=acc["account_id"],
-                name=acc["name"],
-                type=acc["type"],
-                subtype=acc.get("subtype"),
-                current_balance=acc["balances"].get("current"),
-                available_balance=acc["balances"].get("available"),
-                currency=acc["balances"].get("iso_currency_code")
-            )
-            db.add(new_account)
-    db.commit()
+        # Decrypt the stored Plaid token
+        decrypted_access_token = decrypt_token(db_user.plaid_access_token)
 
-    # Refresh Transactions (for the past 30 days)
-    try:
-        end_date = datetime.now().date()
-        start_date = (datetime.now() - timedelta(days=30)).date()
-        transactions_request = TransactionsGetRequest(
-            client_id=PLAID_CLIENT_ID,
-            secret=PLAID_SECRET,
-            access_token=decrypted_access_token,
-            start_date=start_date,
-            end_date=end_date
-        )
-        transactions_response = client.transactions_get(transactions_request)
-        transactions_data = transactions_response.to_dict().get("transactions", [])
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error fetching transactions: {str(e)}")
-
-    for t in transactions_data:
-        existing_tx = (
-            db.query(Plaid_Transactions)
-            .filter(Plaid_Transactions.transaction_id == t["transaction_id"])
-            .first()
-        )
-        if existing_tx:
-            # Optionally update the transaction if necessary.
-            continue
-
-        # Parse the transaction date if it is a string
+        # Refresh Bank Accounts
         try:
-            if isinstance(t["date"], str):
-                tx_date = datetime.strptime(t["date"], "%Y-%m-%d").date()
+            accounts_request = AccountsGetRequest(
+                client_id=PLAID_CLIENT_ID,
+                secret=PLAID_SECRET,
+                access_token=decrypted_access_token
+            )
+            accounts_response = client.accounts_get(accounts_request)
+            accounts_data = accounts_response.to_dict().get("accounts", [])
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching accounts: {str(e)}")
+
+        for acc in accounts_data:
+            # Upsert account record based on the unique account_id
+            existing_account = (
+                db.query(Plaid_Bank_Account)
+                .filter(Plaid_Bank_Account.account_id == acc["account_id"])
+                .first()
+            )
+            if existing_account:
+                # Update account details
+                existing_account.name = acc["name"]
+                existing_account.type = acc["type"]
+                existing_account.subtype = acc.get("subtype")
+                existing_account.current_balance = acc["balances"].get("current")
+                existing_account.available_balance = acc["balances"].get("available")
+                existing_account.currency = acc["balances"].get("iso_currency_code")
             else:
-                tx_date = t["date"]
-        except Exception:
-            tx_date = None
+                new_account = Plaid_Bank_Account(
+                    user_id=user["id"],
+                    account_id=acc["account_id"],
+                    name=acc["name"],
+                    type=acc["type"],
+                    subtype=acc.get("subtype"),
+                    current_balance=acc["balances"].get("current"),
+                    available_balance=acc["balances"].get("available"),
+                    currency=acc["balances"].get("iso_currency_code")
+                )
+                db.add(new_account)
+        db.commit()
 
-        new_tx = Plaid_Transactions(
-            transaction_id=t["transaction_id"],
-            account_id=t["account_id"],  # This FK references Plaid_Bank_Account.account_id
-            amount=t["amount"],
-            currency=t.get("iso_currency_code"),
-            category=", ".join(t["category"]) if t.get("category") else None,
-            merchant_name=t.get("merchant_name"),
-            date=tx_date
-        )
-        db.add(new_tx)
-    db.commit()
+        # Refresh Transactions (for the past 30 days)
+        try:
+            end_date = datetime.now().date()
+            start_date = (datetime.now() - timedelta(days=30)).date()
+            transactions_request = TransactionsGetRequest(
+                client_id=PLAID_CLIENT_ID,
+                secret=PLAID_SECRET,
+                access_token=decrypted_access_token,
+                start_date=start_date,
+                end_date=end_date
+            )
+            transactions_response = client.transactions_get(transactions_request)
+            transactions_data = transactions_response.to_dict().get("transactions", [])
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching transactions: {str(e)}")
 
-    return {"message": "Bank accounts and transactions refreshed successfully."}
+        for t in transactions_data:
+            existing_tx = (
+                db.query(Plaid_Transactions)
+                .filter(Plaid_Transactions.transaction_id == t["transaction_id"])
+                .first()
+            )
+            if existing_tx:
+                continue
+
+            # Parse the transaction date if it is a string
+            try:
+                if isinstance(t["date"], str):
+                    tx_date = datetime.strptime(t["date"], "%Y-%m-%d").date()
+                else:
+                    tx_date = t["date"]
+            except Exception:
+                tx_date = None
+
+            # Get category from personal_finance_category if available
+            category = None
+            if t.get("personal_finance_category"):
+                category = t["personal_finance_category"].get("primary")
+            elif t.get("category"):
+
+                raw_category = t["category"][0] if t["category"] else None
+                if raw_category:
+                    # Convert to title case and replace underscores with spaces
+                    category = raw_category.replace("_", " ").title()
+
+            new_tx = Plaid_Transactions(
+                transaction_id=t["transaction_id"],
+                account_id=t["account_id"],  # This FK references Plaid_Bank_Account.account_id
+                amount=t["amount"],
+                currency=t.get("iso_currency_code"),
+                category=category,
+                merchant_name=t.get("merchant_name"),
+                date=tx_date
+            )
+            db.add(new_tx)
+            db.flush()  # Flush to get the transaction ID
+
+            # Handle category linking
+            if category:
+                # Check if the user already has a category with this name
+                bank_account = db.query(Plaid_Bank_Account).filter_by(account_id=t["account_id"]).first()
+                if not bank_account:
+                    continue
+
+                user_id = bank_account.user_id
+                user_category = (
+                    db.query(User_Categories)
+                    .filter_by(user_id=user_id, name=category)
+                    .first()
+                )
+
+                # If the category doesn't exist, create it
+                if not user_category:
+                    try:
+                        category_data = UserCategoryCreate(name=category, color="#000000", weekly_limit=None)
+                        user_category = create_user_category(user_id, category_data, db)
+                        db.flush()  # Flush to get the category ID
+                    except HTTPException:
+                        continue
+
+                # Create a Transaction_Category_Link
+                category_link = Transaction_Category_Link(
+                    transaction_id=new_tx.transaction_id,
+                    category_id=user_category.id,
+                )
+                db.add(category_link)
+
+        db.commit()
+        return {"message": "Bank accounts and transactions refreshed successfully."}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/unlink")
 async def unlink_plaid(
