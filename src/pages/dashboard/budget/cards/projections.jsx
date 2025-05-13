@@ -116,6 +116,7 @@ const ProjectionsCard = () => {
                         frequency={frequency}
                         startDate={startDate}
                         endDate={endDate}
+                        setIsShowingResults={setIsShowingResults}
                     />
                 </div>
             )}
@@ -125,7 +126,7 @@ const ProjectionsCard = () => {
 
 export default ProjectionsCard;
 
-const ProjectedResults = ({ savingsGoal, timeframe, frequency, startDate, endDate }) => {
+const ProjectedResults = ({ savingsGoal, timeframe, frequency, startDate, endDate, setIsShowingResults }) => {
 
     const calculateSavingsPerInterval = () => {
         const timeframesInMonths = {
