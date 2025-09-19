@@ -7,5 +7,9 @@ sqlalchemy
 plaid-python
 python-dotenv
 pymysql
-polygon-api-client
+requests
 sendgrid
+autogluon.timeseries
+pandas
+matplotlib
+numpy

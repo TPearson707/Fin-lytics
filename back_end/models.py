@@ -202,3 +202,16 @@ class User_Balance(Base):
 
     user = relationship("Users", back_populates="balances")
 
+class Stock_Prediction(Base):
+    __tablename__ = "Stock_Predictions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticker = Column(String(10), nullable=False, index=True)
+    predicted_price = Column(Float, nullable=False)
+    confidence_low = Column(Float, nullable=True)
+    confidence_high = Column(Float, nullable=True)
+    prediction_time = Column(DateTime, default=datetime.utcnow, index=True)
+    horizon_minutes = Column(Integer, default=5)
+    model_version = Column(String(50), default="ChronosFineTuned")
+    created_at = Column(DateTime, default=datetime.utcnow)
+
