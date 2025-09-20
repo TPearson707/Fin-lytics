@@ -1,11 +1,13 @@
 import "../../../../styles/pages/dashboard/budget-page/card.scss";
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const TransactionCard = () => {
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchTransactions = async () => {
@@ -27,14 +29,21 @@ const TransactionCard = () => {
                 setTransactions(recentTransactions);
                 setLoading(false);
             } catch (error) {
-                console.error("Error fetching transactions:", error);
-                setError("No transactions in the past 30 days");
+                if (error.response && error.response.status === 401) {
+                    console.error("Unauthorized: Redirecting to login.");
+                    alert("Your session has expired. Please log in again.");
+                    localStorage.removeItem("token");
+                    navigate("/login");
+                } else {
+                    console.error("Error fetching transactions:", error);
+                    setError("No transactions in the past 30 days");
+                }
                 setLoading(false);
             }
         };
 
         fetchTransactions();
-    }, []);
+    }, [navigate]);
 
     if (loading) return <div className="transaction-card">Loading transactions...</div>;
     if (error) return <div className="transaction-card error">{error}</div>;

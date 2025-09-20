@@ -38,7 +38,7 @@ const About = () => {
             </Typography>
             <Grid container spacing={4}>
                 {developers.map((developer, index) => (
-                    <Grid item xs={12} sm={6} md={3} key={index}>
+                    <Grid key={index}>
                         <Card>
                             <CardContent>
                                 <Typography variant="h5" gutterBottom>

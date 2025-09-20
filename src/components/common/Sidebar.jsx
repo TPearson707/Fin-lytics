@@ -16,7 +16,10 @@ import {
 import { styled } from "@mui/system";
 import axios from "axios";
 
-const StyledListItem = styled(ListItem)(({ theme }) => ({
+const StyledListItem = styled(({ button, ...otherProps }) => {
+  const { component: Component = "div", ...rest } = otherProps;
+  return <ListItem {...rest} component={Component} />;
+})(({ theme }) => ({
   color: "white",
   transition: "background-color 0.3s, transform 0.2s",
   "&:hover": {
@@ -51,7 +54,12 @@ const Sidebar = ({ setIsAuthenticated }) => {
         const { first_name, last_name, username, id } = response.data.User;
         setUser({ firstName: first_name, lastName: last_name, username, id });
       } catch (error) {
-        console.error("Error fetching user:", error);
+        if (error.response && error.response.status === 401) {
+          console.error("Unauthorized: Redirecting to login.");
+          navigate("/login");
+        } else {
+          console.error("Error fetching user:", error);
+        }
       }
     } else {
       console.log("Could not get user, user is unauthorized");

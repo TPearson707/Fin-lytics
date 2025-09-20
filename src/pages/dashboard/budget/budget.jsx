@@ -1,5 +1,6 @@
-import "../../../styles/pages/dashboard/budget-page/budget.scss"
 import React from "react";
+import { Box, Grid, Paper, Typography, Button } from "@mui/material";
+import "../../../styles/pages/dashboard/budget-page/budget.scss";
 import { useEffect, useState } from "react";
 import axios from "axios";
 // import QuickAccess from "./cards/quickaccess.jsx" removed since logic will probably be simple enough to leave in parent
@@ -11,62 +12,66 @@ import TransactionCard from "./cards/transactions.jsx"
 import EditTransactions from "./popups/editTransactions.jsx";
 import ManageBudgets from "./popups/manageBudget.jsx";
 import EditAccounts from "./popups/editAccounts.jsx";
+import { useNavigate } from "react-router-dom";
 
 
 const Budget = () => {
-    return (
-        <div className="page-container">
-                <h2>Budget Manager</h2>
-            <div className="budget-content">
-                <div className="group1">
-                    <div className="quick-card">
-                        <div className="card-title">Quick Access</div>
-                        <QuickAccess/>
-                    </div>
-                    <div className="myaccounts-card">
-                        <div className="card-title">My Accounts</div>
-                        <MyAccounts/>
-                    </div>
-                    <div className="transactions-card">
-                        <div className="card-title">Recent Transactions</div>
-                        <TransactionCard/>
-                    </div>
-                </div>
-                <div className="group2">
-                    <div className="week-card">
-                        <div className="card-title">Weekly Overview</div>
-                        {/* <WeeklyOverview/> */}
-                    </div>
-                </div>
-                <div className="group3">
-                    <div className="visual-card">
-                        <div className="card-title">Data Analytics</div>
-                        <VisualCard/>
-                    </div>
-                    <div className="projections-card">
-                        <div className="card-title">Budget Projections</div>
-                        <ProjectionsCard/>
-                    </div>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-export default Budget;
-
-const QuickAccess = () => { //need to open modal for each button
     const [isEditTransactionsOpen, setIsEditTransactionsOpen] = useState(false);
     const [isManageBudgetsOpen, setIsManageBudgetsOpen] = useState(false);
     const [isEditAccountsOpen, setIsEditAccountsOpen] = useState(false);
 
     return (
-        <div className="card-content">
-            <div className="card-body">
-                <button onClick={() => setIsEditTransactionsOpen(true)}>Edit Transactions</button>
-                <button onClick={() => setIsManageBudgetsOpen(true)}>Manage Budget</button>
-                <button onClick={() => setIsEditAccountsOpen(true)}>Edit Accounts</button>
-            </div>
+        <Box className="page-container" sx={{ padding: "20px" }}>
+            <Typography variant="h4" gutterBottom>
+                Budget Manager
+            </Typography>
+            <Grid container spacing={3} className="budget-content">
+                <Grid className="group3">
+                    <Paper elevation={3} className="quick-card">
+                        <Typography variant="h6" className="card-title">
+                            Quick Access
+                        </Typography>
+                        <QuickAccess
+                            onEditTransactions={() => setIsEditTransactionsOpen(true)}
+                            onManageBudgets={() => setIsManageBudgetsOpen(true)}
+                            onEditAccounts={() => setIsEditAccountsOpen(true)}
+                        />
+                    </Paper>
+                </Grid>
+                <Grid className="group1">
+                    <Paper elevation={3} className="week-card">
+                        <Typography variant="h6" className="card-title">
+                            Weekly Overview
+                        </Typography>
+                        {/* <WeeklyOverview/> */}
+                    </Paper>
+                </Grid>
+                <Grid className="group3">
+                    <Paper elevation={3} className="transactions-card">
+                        <Typography variant="h6" className="card-title">
+                            Recent Transactions
+                        </Typography>
+                        <TransactionCard />
+                    </Paper>
+                </Grid>
+                <Grid className="group3">
+                    <Paper elevation={3} className="visual-card">
+                        <Typography variant="h6" className="card-title">
+                            Data Analytics
+                        </Typography>
+                        <VisualCard />
+                    </Paper>
+                </Grid>
+                <Grid className="group3">
+                    <Paper elevation={3} className="projections-card">
+                        <Typography variant="h6" className="card-title">
+                            Budget Projections
+                        </Typography>
+                        <ProjectionsCard />
+                    </Paper>
+                </Grid>
+                
+            </Grid>
 
             {isEditTransactionsOpen && (
                 <EditTransactions onClose={() => setIsEditTransactionsOpen(false)} />
@@ -77,6 +82,20 @@ const QuickAccess = () => { //need to open modal for each button
             {isEditAccountsOpen && (
                 <EditAccounts onClose={() => setIsEditAccountsOpen(false)} />
             )}
+        </Box>
+    )
+}
+
+export default Budget;
+
+const QuickAccess = ({ onEditTransactions, onManageBudgets, onEditAccounts }) => {
+    return (
+        <div className="card-content">
+            <div className="card-body">
+                <button onClick={onEditTransactions}>Edit Transactions</button>
+                <button onClick={onManageBudgets}>Manage Budget</button>
+                <button onClick={onEditAccounts}>Edit Accounts</button>
+            </div>
         </div>
     );
 }
@@ -93,6 +112,7 @@ const MyAccounts = () => {
         savings: '',
         cash: ''
     });
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchBalances = async () => {
@@ -118,7 +138,14 @@ const MyAccounts = () => {
                     cash: balancesObj.cash?.balance_amount.toString() || '0'
                 });
             } catch (error) {
-                console.error("Error fetching balances:", error);
+                if (error.response && error.response.status === 401) {
+                    console.error("Unauthorized: Redirecting to login.");
+                    alert("Your session has expired. Please log in again.");
+                    localStorage.removeItem("token");
+                    navigate("/login");
+                } else {
+                    console.error("Error fetching balances:", error);
+                }
             }
         };
 

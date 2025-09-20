@@ -46,11 +46,30 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
           const response = await fetch("/api/user", {
             headers: { Authorization: `Bearer ${token}` },
           });
+          if (!response.ok) {
+            if (response.status === 401) {
+              console.error("Unauthorized: Redirecting to login.");
+              navigate("/login");
+            }
+            throw new Error("Unauthorized");
+          }
+
+          const contentType = response.headers.get("Content-Type");
+          if (!contentType || !contentType.includes("application/json")) {
+            throw new Error("Invalid JSON response");
+          }
+
           const data = await response.json();
           setUser(data);
+        } else {
+          console.error("No token found. Redirecting to login.");
+          navigate("/login");
         }
       } catch (error) {
         console.error("Failed to fetch user data", error);
+        if (error.message === "Unauthorized" || error.message === "Invalid JSON response") {
+          navigate("/login");
+        }
       }
     };
 
