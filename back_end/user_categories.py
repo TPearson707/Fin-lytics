@@ -22,14 +22,15 @@ db_dependency = Annotated[Session, Depends(get_db)]
 
 # ==================== Schemas ====================
 class UserCategoryCreate(BaseModel):
+    user_id: int
     name: str
-    color: str
     weekly_limit: float | None = None
+    color: str | None = None
 
 class UserCategoryUpdate(BaseModel):
     name: str
-    color: str
     weekly_limit: float | None = None
+    color: str | None = None
 
 # ==================== Logic ====================
 def get_user_categories(user_id: int, db: Session):
@@ -110,8 +111,8 @@ async def get(user_id: int, db: db_dependency):
     return get_user_categories(user_id, db)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create(user_id: int, data: UserCategoryCreate, db: db_dependency):
-    return create_user_category(user_id, data, db)
+async def create(data: UserCategoryCreate, db: db_dependency):
+    return create_user_category(data.user_id, data, db)
 
 @router.put("/{category_id}", status_code=status.HTTP_200_OK)
 async def update(category_id: int, data: UserCategoryUpdate, db: db_dependency):

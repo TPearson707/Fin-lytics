@@ -89,7 +89,7 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
     db.commit()
 
     verification_link = f"http://localhost:8000/auth/verify_email?token={verification_token}"
-    email_content = f"Click the link to verify your email: {verification_link}"
+    email_content = f"Welcome to Fin-lytics! Click the link to verify your email: {verification_link}"
     send_email(create_user_request.email, "Verify your email", email_content)
 
     user_settings = Settings(user_id=create_user_model.id, email_notifications=False, sms_notifications=False, push_notifications=False)

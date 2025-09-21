@@ -1,53 +1,136 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import "../../../../components/popups/modal.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencil } from "@fortawesome/free-solid-svg-icons";
 import "./manbud.scss";
+import api from "../../../../api";
 
 const ManageBudgets = ({ onClose }) => {
     const [annualBudget, setAnnualBudget] = useState({
         name: "Annual Budget",
-        amount: 50000, //this is hardcoded for now, but will be pulled from database
+        amount: 50000,
         current: 45000,
     });
 
-    const [categories, setCategories] = useState([
-        { id: 1, name: "Entertainment", current: 4000, actual: 3500 },
-        { id: 2, name: "Food", current: 8000, actual: 7500 },
-        { id: 3, name: "Utilities", current: 2000, actual: 1800 },
-        { id: 4, name: "Transportation", current: 1500, actual: 1400 },
-    ]);
+    const [categories, setCategories] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    //need to make editing annual budget, we only want to edit the annual goal
     const [isEditingAnnual, setIsEditingAnnual] = useState(false);
     const [isEditingCategory, setIsEditingCategory] = useState(false);
     const [isAddingCategory, setIsAddingCategory] = useState(false);
     const [newCategory, setNewCategory] = useState({
         name: "",
-        current: 0, //current budget
-        actual: 0, //actual USED & working, it's a bit confusing just from reading it
+        weekly_limit: 0,
     });
+
+    // Get user ID from token
+    const getUserIdFromToken = () => {
+        const token = localStorage.getItem("token");
+        if (!token) return null;
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            return payload.id;
+        } catch (error) {
+            return null;
+        }
+    };
+
+    // Fetch user's categories from backend
+    const fetchCategories = async () => {
+        try {
+            setLoading(true);
+            const userId = getUserIdFromToken();
+            if (!userId) throw new Error("User not authenticated");
+            
+            const response = await api.get(`/user_categories/${userId}`);
+            setCategories(response.data);
+        } catch (error) {
+            console.error("Error fetching categories:", error);
+            setError("Failed to load categories");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Create new category
+    const handleAddCategory = async (e) => {
+        e.preventDefault();
+        try {
+            const userId = getUserIdFromToken();
+            if (!userId) throw new Error("User not authenticated");
+
+            const response = await api.post("/user_categories/", {
+                user_id: userId,
+                name: newCategory.name,
+                weekly_limit: newCategory.weekly_limit,
+                color: "#000000"
+            });
+
+            setCategories((prev) => [...prev, response.data]);
+            setNewCategory({ name: "", weekly_limit: 0 });
+            setIsAddingCategory(false);
+        } catch (error) {
+            console.error("Error creating category:", error);
+            setError("Failed to create category: " + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    // Update category
+    const handleCategoryEdit = async (e, categoryId) => {
+        e.preventDefault();
+        try {
+            const category = categories.find(cat => cat.id === categoryId);
+            if (!category) return;
+
+            const response = await api.put(`/user_categories/${categoryId}`, {
+                name: category.name,
+                weekly_limit: category.weekly_limit,
+                color: category.color
+            });
+
+            setCategories((prev) =>
+                prev.map((cat) => (cat.id === categoryId ? response.data : cat))
+            );
+            setIsEditingCategory(false);
+        } catch (error) {
+            console.error("Error updating category:", {
+                message: error.message,
+                response: error.response,
+                request: error.request,
+                config: error.config
+            });
+            setError("Failed to update category: " + (error.response?.data?.detail || error.message));
+        }
+    };
+
+    // Delete category
+    const handleDeleteCategory = async (categoryId) => {
+        try {
+            await api.delete(`/user_categories/${categoryId}`);
+            setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
+        } catch (error) {
+            console.error("Error deleting category:", error);
+            setError("Failed to delete category");
+        }
+    };
 
     const handleAnnualEdit = (e) => {
         e.preventDefault();
         setIsEditingAnnual(false);
     }
-    const handleCategoryEdit = (e) => {
-        e.preventDefault();
-        setIsEditingCategory(false);
+
+    // Load categories on component mount
+    useEffect(() => {
+        fetchCategories();
+    }, []);
+
+    if (loading) {
+        return <div>Loading categories...</div>;
     }
-    const handleAddCategory = (e) => {
-        e.preventDefault();
-        setIsAddingCategory(false);
-        setCategories((prev) => [
-            ...prev,
-            {
-                id: categories.length + 1,
-                name: newCategory.name,
-                current: newCategory.current,
-                actual: newCategory.actual,
-            },
-        ]);
+
+    if (error) {
+        return <div style={{ color: 'red' }}>{error}</div>;
     }
 
     return (
@@ -64,64 +147,48 @@ const ManageBudgets = ({ onClose }) => {
                     <div className="budget-table">
                         <table>
                             <thead>
-                            <tr>
-                                <th>Annual Goal</th>
-                                <th>Working</th>
-                                <th>Remainder</th>
-                                <th>Edit</th>
-                            </tr>
+                                <tr>
+                                    <th>Annual Goal</th>
+                                    <th>Working</th>
+                                    <th>Remainder</th>
+                                    <th>Edit</th>
+                                </tr>
                             </thead>
+                            <tbody>
+                                <tr>
+                                    {isEditingAnnual ? (
+                                        <td>
+                                            <form onSubmit={handleAnnualEdit}>
+                                                <input
+                                                    className="budget-input"
+                                                    type="number"
+                                                    value={annualBudget.amount}
+                                                    onChange={(e) =>
+                                                        setAnnualBudget((prev) => ({ ...prev, amount: parseInt(e.target.value) }))
+                                                    }
+                                                />
+                                                <button type="submit" className="save-btn">
+                                                    ↵
+                                                </button>
+                                            </form>
+                                        </td>
+                                    ) : (
+                                        <td>${annualBudget.amount}</td>
+                                    )}
+                                    <td>${annualBudget.current}</td>
+                                    <td>${annualBudget.amount - annualBudget.current}</td>
+                                    <td>
+                                        <button 
+                                            className="edit-btn" 
+                                            onClick={() => setIsEditingAnnual(true)}
+                                        >
+                                            <FontAwesomeIcon icon={faPencil} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            </tbody>
                         </table>
-                        
-                        <tbody>
-                            <tr>
-                            {isEditingAnnual ? (
-                                <td>
-                                    <form onSubmit={handleAnnualEdit}>
-                                    <input
-                                        className="budget-input"
-                                        type="number"
-                                        value={annualBudget.amount}
-                                        onChange={(e) =>
-                                            setAnnualBudget((prev) => ({ ...prev, amount: parseInt(e.target.value) }))
-                                        }
-                                    />
-                                    <button type="submit" className="save-btn">
-                                     ↵
-                                    </button>
-                                    </form>
-                                </td>
-                                
-                                 ) : (
-                                    <td>${annualBudget.amount}</td>
-                                 )}
-
-                                <td>${annualBudget.current}</td>
-                                <td>${annualBudget.amount - annualBudget.current}</td>
-                                <td>
-                                    <button className="edit-btn" 
-                                    onClick={() => setIsEditingAnnual(true)}
-                                    >
-                                        <FontAwesomeIcon icon={faPencil} />
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
                     </div>
-                    
-                    {/* <p>{annualBudget.name}</p> */}
-                    {/* <p>${annualBudget.current} / ${annualBudget.amount}</p> */}
-                    {/* <form>
-                        <div className="form-group">
-                            <label>Budget Name:</label>
-                            <input type="text" placeholder="Enter budget name" />
-                        </div>
-                        <div className="form-group">
-                            <label>Amount:</label>
-                            <input type="number" placeholder="Enter budget amount" />
-                        </div>
-                        <button type="submit">Save</button>
-                    </form> */}
                 </div>
 
                 <BudgetGoals
@@ -130,6 +197,7 @@ const ManageBudgets = ({ onClose }) => {
                     isEditingCategory={isEditingCategory}
                     setIsEditingCategory={setIsEditingCategory}
                     handleCategoryEdit={handleCategoryEdit}
+                    handleDeleteCategory={handleDeleteCategory}
                     isAddingCategory={isAddingCategory}
                     setIsAddingCategory={setIsAddingCategory}
                     newCategory={newCategory}
@@ -147,6 +215,7 @@ const BudgetGoals = ({
     isEditingCategory,
     setIsEditingCategory,
     handleCategoryEdit,
+    handleDeleteCategory,
     isAddingCategory,
     setIsAddingCategory,
     newCategory,
@@ -160,9 +229,9 @@ const BudgetGoals = ({
                 <thead>
                     <tr>
                         <th>Category</th>
-                        <th>Monthly Goal</th>
-                        <th>Working</th>
-                        <th>Remainder</th>
+                        <th>Weekly Goal</th>
+                        <th>Amount Spent</th>
+                        <th>Ammount Remaining</th>
                         <th>Edit</th>
                     </tr>
                 </thead>
@@ -188,20 +257,18 @@ const BudgetGoals = ({
                                     <input
                                         type="number"
                                         className="budget-input"
-                                        value={category.actual}
+                                        value={category.weekly_limit}
                                         onChange={(e) =>
                                             setCategories((prev) =>
                                                 prev.map((cat) =>
                                                     cat.id === category.id
-                                                        ? { ...cat, actual: parseInt(e.target.value) }
+                                                        ? { ...cat, weekly_limit: parseFloat(e.target.value) || 0 }
                                                         : cat
                                                 )
                                             )
                                         }
                                     />
                                 </td>
-                                <td>${category.current.toLocaleString()}</td>
-                                <td>${(category.current - category.actual).toLocaleString()}</td>
                                 <td>
                                     <button
                                         type="submit"
@@ -210,14 +277,20 @@ const BudgetGoals = ({
                                     >
                                         Save
                                     </button>
+                                    <button
+                                        className="cancel-btn"
+                                        onClick={() => setIsEditingCategory(false)}
+                                    >
+                                        Cancel
+                                    </button>
                                 </td>
                             </tr>
                         ) : (
                             <tr key={category.id}>
                                 <td>{category.name}</td>
-                                <td>${category.current.toLocaleString()}</td>
-                                <td>${category.actual.toLocaleString()}</td>
-                                <td>${(category.current - category.actual).toLocaleString()}</td>
+                                <td>${category.weekly_limit.toLocaleString()}</td>
+                                <td></td>
+                                <td></td>
                                 <td>
                                     <button
                                         className="edit-btn"
@@ -228,6 +301,7 @@ const BudgetGoals = ({
                                 </td>
                             </tr>
                         )
+
                     )}
 
                     {isAddingCategory && (
@@ -235,7 +309,7 @@ const BudgetGoals = ({
                             <td>
                                 <input
                                     type="text"
-                                    placeholder="Name"
+                                    placeholder="Category Name"
                                     className="budget-input"
                                     value={newCategory.name}
                                     onChange={(e) =>
@@ -246,16 +320,14 @@ const BudgetGoals = ({
                             <td>
                                 <input
                                     type="number"
-                                    placeholder="Monthly Goal"
+                                    placeholder="Weekly Goal"
                                     className="budget-input"
-                                    value={newCategory.actual}
+                                    value={newCategory.weekly_limit}
                                     onChange={(e) =>
-                                        setNewCategory((prev) => ({ ...prev, actual: parseInt(e.target.value) }))
+                                        setNewCategory((prev) => ({ ...prev, weekly_limit: parseFloat(e.target.value)}))
                                     }
                                 />
                             </td>
-                            <td>-</td>
-                            <td>-</td>
                             <td>
                                 <button
                                     type="submit"
@@ -264,8 +336,6 @@ const BudgetGoals = ({
                                 >
                                     Save
                                 </button>
-                            </td>
-                            <td>
                                 <button
                                     className="x-btn"
                                     onClick={() => setIsAddingCategory(false)}
@@ -278,18 +348,16 @@ const BudgetGoals = ({
                 </tbody>
             </table>
 
-            {/* Add Category Button */}
             {!isAddingCategory && (
                 <button
                     className="add-category-btn"
                     onClick={() => setIsAddingCategory(true)}
                 >
-                    +
+                    + Add Category
                 </button>
             )}
         </div>
     );
 };
-
 
 export default ManageBudgets;
