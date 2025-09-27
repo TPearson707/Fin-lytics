@@ -1,128 +1,141 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-// import { faCircleUser, faAngleDown } from "@fortawesome/free-solid-svg-icons";
+import {
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  Toolbar,
+  Box,
+  Typography,
+} from "@mui/material";
+import { styled } from "@mui/system";
 import axios from "axios";
-// import miniLogo from "../../assets/miniLogo.png";
 
-// importing modal content
-import Modal from "./modal/modal";
-// import NotificationBlock from "../popups/notifs";
-// import LogoutBlock from "../popups/logout";
-// import SettingsBlock from "../popups/settings/settings";
-
-import "../../styles/components/sidebar.scss";
+const StyledListItem = styled(({ button, ...otherProps }) => {
+  const { component: Component = "div", ...rest } = otherProps;
+  return <ListItem {...rest} component={Component} />;
+})(({ theme }) => ({
+  color: "white",
+  transition: "background-color 0.3s, transform 0.2s",
+  "&:hover": {
+    backgroundColor: theme.palette.primary.dark,
+    transform: "scale(1.05)",
+  },
+}));
 
 const Sidebar = ({ setIsAuthenticated }) => {
-    const [isModalOpen, setModalOpen] = useState(false);
-    const [modalContent, setModalContent] = useState(null);
-    const [user, setUser] = useState(null);
+  const [isModalOpen, setModalOpen] = useState(false);
+  const [modalContent, setModalContent] = useState(null);
+  const [user, setUser] = useState(null);
 
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    const handleLogout = () => {
-        localStorage.removeItem("token"); // Remove token from localStorage
-        setIsAuthenticated(false); // Update authentication state
-        navigate("/"); // Redirect to login or homepage
-    };
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    setIsAuthenticated(false);
+    navigate("/");
+  };
 
-    const getUser = async () => {
-        if (setIsAuthenticated) {
-            try {
-                const token = localStorage.getItem("token");
-                const response = await axios.get("http://localhost:8000/", {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                    },
-                });
+  const getUser = async () => {
+    if (setIsAuthenticated) {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get("http://localhost:8000/", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-                const { first_name, last_name, username, id } = response.data.User;
-                setUser({ firstName: first_name, lastName: last_name, username, id });
-                console.log(response.data);
-            } catch (error) {
-                console.error("Error fetching user:", error);
-            }
+        const { first_name, last_name, username, id } = response.data.User;
+        setUser({ firstName: first_name, lastName: last_name, username, id });
+      } catch (error) {
+        if (error.response && error.response.status === 401) {
+          console.error("Unauthorized: Redirecting to login.");
+          navigate("/login");
         } else {
-            console.log("Could not get user, user is unauthorized");
+          console.error("Error fetching user:", error);
         }
-    };
+      }
+    } else {
+      console.log("Could not get user, user is unauthorized");
+    }
+  };
 
-    useEffect(() => {
-        if (setIsAuthenticated) {
-            getUser();
-        }
-    }, [setIsAuthenticated]);
+  useEffect(() => {
+    if (setIsAuthenticated) {
+      getUser();
+    }
+  }, [setIsAuthenticated]);
 
-    const openModal = (contentComponent) => {
-        setModalContent(() => contentComponent);
-        setModalOpen(true);
-    };
+  const openModal = (contentComponent) => {
+    setModalContent(() => contentComponent);
+    setModalOpen(true);
+  };
 
-    const closeModal = () => {
-        setModalContent(null);
-        setModalOpen(false);
-    };
+  const closeModal = () => {
+    setModalContent(null);
+    setModalOpen(false);
+  };
 
-    return (
-        <>
-            <div className="sidebar">
-                <div className="sidebar-content">
-                    {/* <div className="side-logo">
-                        <Link to="/"><img src={miniLogo} alt="MiniLogo" /></Link>
-                    </div> */}
-                    <MenuContainer />
-                </div>
-                {/* <ProfileDropdown user={user} openModal={openModal} handleLogout={handleLogout} /> */}
-            </div>
-            {isModalOpen && (
-                <div className="modal-overlay">
-                    <Modal isOpen={isModalOpen} onClose={closeModal} content={modalContent ? modalContent() : null} />
-                </div>
-            )}
-        </>
-    );
+  return (
+    <>
+      <Drawer
+        variant="permanent"
+        anchor="left"
+        sx={{
+          zIndex: 1000, 
+          width: 240,
+          flexShrink: 0,
+          position: "relative", 
+          paddingTop: "64px",
+          [`& .MuiDrawer-paper`]: {
+            width: 240,
+            boxSizing: "border-box",
+            backgroundColor: "primary.main",
+            color: "white",
+          },
+        }}
+      >
+        {/* Spacer for Navbar */}
+        <Toolbar />
+        <Box sx={{ overflow: "hidden" }}>
+          <List>
+            <StyledListItem button component={Link} to="/">
+              <ListItemText
+                primary={<Typography sx={{ fontSize: "1rem" }}>Overview</Typography>}
+              />
+            </StyledListItem>
+            <StyledListItem button component={Link} to="/Stock">
+              <ListItemText
+                primary={<Typography sx={{ fontSize: "1rem" }}>Stock AI</Typography>}
+              />
+            </StyledListItem>
+            <StyledListItem button component={Link} to="/portfolio">
+              <ListItemText
+                primary={<Typography sx={{ fontSize: "1rem" }}>Portfolio</Typography>}
+              />
+            </StyledListItem>
+            <StyledListItem button component={Link} to="/Budget">
+              <ListItemText
+                primary={<Typography sx={{ fontSize: "1rem" }}>Budgeter</Typography>}
+              />
+            </StyledListItem>
+          </List>
+          <Divider />
+        </Box>
+      </Drawer>
+
+      <Dialog open={isModalOpen} onClose={closeModal} fullWidth maxWidth="sm">
+        <DialogTitle>Modal</DialogTitle>
+        <DialogContent>{modalContent ? modalContent() : null}</DialogContent>
+      </Dialog>
+    </>
+  );
 };
-
-const MenuContainer = () => (
-    <div className="menu-container">
-        <ul>
-            <li><Link to="/">Overview</Link></li>
-            <li><Link to="/Stock">Stock AI</Link></li>
-            <li><Link to="/portfolio">Portfolio</Link></li>
-            <li><Link to="/Budget">Budgeter</Link></li>
-        </ul>
-    </div>
-);
-
-// const ProfileDropdown = ({ user, openModal, handleLogout }) => {
-//     const [isOpen, setIsOpen] = useState(false);
-
-//     const handleProfileClick = () => {
-//         setIsOpen((prev) => !prev);
-//     };
-
-//     return (
-//         <div className="side-bot">
-//             <div className="profile-drop">
-//                 <button className="profile-button" onClick={handleProfileClick}>
-//                     <FontAwesomeIcon icon={faCircleUser} size="2xl" />
-//                     {user && <span className="profile-icon-text">{user.firstName}</span>}
-//                     <FontAwesomeIcon icon={faAngleDown} className="arrow" />
-//                 </button>
-//                 {isOpen && <ProfileContent user={user} openModal={openModal} handleLogout={handleLogout} />}
-//             </div>
-//         </div>
-//     );
-// };
-
-// const ProfileContent = ({ user, openModal, handleLogout }) => {
-//     return (
-//         <div className="profile-content">
-//             <button onClick={() => openModal(() => <NotificationBlock />)}>Notifications</button>
-//             <button onClick={() => openModal(() => <SettingsBlock />)}>Settings</button>
-//             <button className="logout" onClick={handleLogout}>Log Out</button>
-//         </div>
-//     );
-// };
 
 export default Sidebar;

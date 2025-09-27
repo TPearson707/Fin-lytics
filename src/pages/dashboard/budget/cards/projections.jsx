@@ -1,170 +1,115 @@
 import React, { useState } from "react";
+import { Box, Button, MenuItem, Select, TextField, Typography } from "@mui/material";
 import "../../../../styles/pages/dashboard/budget-page/card.scss";
 
 const ProjectionsCard = () => {
+  const [timeframe, setTimeframe] = useState("3 months");
+  const [savingsGoal, setSavingsGoal] = useState(0);
+  const [frequency, setFrequency] = useState("weekly");
+  const [isShowingResults, setIsShowingResults] = useState(false);
+  const [error, setError] = useState("");
 
-    const [timeframe, setTimeframe] = useState("3m"); // default timeframe
-    const [startDate, setStartDate] = useState(new Date());
-    const [endDate, setEndDate] = useState(null);
-    const [savingsGoal, setSavingsGoal] = useState(0); // default savings goal
-    const [frequency, setFrequency] = useState("weekly"); // default frequency
-    const [isShowingResults, setIsShowingResults] = useState(false);
+  const timeframesInMonths = {
+    "3 months": 3,
+    "6 months": 6,
+    "9 months": 9,
+    "1 year": 12,
+    "1.5 years": 18,
+  };
 
-    const handleTimeframeChange = (e) => {
-        const selectedTimeframe = e.target.value;
-        setTimeframe(selectedTimeframe);
+  const intervalsPerMonth = {
+    weekly: 4,
+    biweekly: 2,
+    monthly: 1,
+  };
 
-        const timeframesInMonths = {
-            "3 months": 3,
-            "6 months": 6,
-            "9 months": 9,
-            "1 year": 12,
-            "1.5 years": 18,
-        };
+  const calculateSavingsPerInterval = () => {
+    const months = timeframesInMonths[timeframe] || 0;
+    const intervals = months * (intervalsPerMonth[frequency] || 0);
 
-        const monthsToAdd = timeframesInMonths[selectedTimeframe] || 0;
-        const newEndDate = new Date(startDate);
-        newEndDate.setMonth(newEndDate.getMonth() + monthsToAdd);
+    return intervals > 0 ? (savingsGoal / intervals).toFixed(2) : "0.00";
+  };
 
-        setEndDate(newEndDate);
-    };
+  const handleCalculate = () => {
+    if (savingsGoal <= 0) {
+      setError("Please enter a valid savings goal greater than 0.");
+      return;
+    }
+    setError("");
+    setIsShowingResults(true);
+  };
 
-    const handleSavingsGoalChange = (e) => {
-        setSavingsGoal(parseFloat(e.target.value) || 0);
-    };
+  return (
+    <Box sx={{ padding: 2, borderRadius: 2 }}>
+      {!isShowingResults && (
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        
+          <Box>
+            <Typography variant="body1">Timeframe:</Typography>
+            <Select
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value)}
+              fullWidth
+              variant="outlined"
+            >
+              {Object.keys(timeframesInMonths).map((key) => (
+                <MenuItem key={key} value={key}>
+                  {key}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
 
-    const handleFrequencyChange = (e) => {
-        setFrequency(e.target.value);
-    };
+          <Box>
+            <Typography variant="body1">Savings Goal ($):</Typography>
+            <TextField
+              type="number"
+              placeholder="Enter your goal"
+              value={savingsGoal}
+              onChange={(e) => setSavingsGoal(parseFloat(e.target.value) || 0)}
+              fullWidth
+              variant="outlined"
+            />
+          </Box>
 
-    const calculateSavingsPerInterval = () => {
-        const timeframesInMonths = {
-            "3 months": 3,
-            "6 months": 6,
-            "9 months": 9,
-            "1 year": 12,
-            "1.5 years": 18,
-        };
+          <Box>
+            <Typography variant="body1">Saving Frequency:</Typography>
+            <Select
+              value={frequency}
+              onChange={(e) => setFrequency(e.target.value)}
+              fullWidth
+              variant="outlined"
+            >
+              {Object.keys(intervalsPerMonth).map((key) => (
+                <MenuItem key={key} value={key}>
+                  {key.charAt(0).toUpperCase() + key.slice(1)}
+                </MenuItem>
+              ))}
+            </Select>
+          </Box>
 
-        const intervalsPerMonth = {
-            weekly: 4,
-            biweekly: 2,
-            monthly: 1,
-        };
+          {error && <Typography color="error">{error}</Typography>}
 
-        const months = timeframesInMonths[timeframe];
-        const intervals = months * intervalsPerMonth[frequency];
+          <Button variant="contained" color="primary" onClick={handleCalculate}>
+            Calculate
+          </Button>
+        </Box>
+      )}
 
-        return savingsGoal / intervals || 0;
-    };
-
-    return (
-        <div className="projections-card">
-            <div className="card-header">
-               
-            </div>
-
-            {!isShowingResults && (
-                <div className="card-body">
-                    <div className="selectors">
-                        <div className="form-group">
-                            <label className="time-sel" htmlFor="timeframe">Timeframe:</label>
-                            <select id="timeframe" value={timeframe} onChange={handleTimeframeChange}>
-                                <option value="3 months">3 Months</option>
-                                <option value="6 months">6 Months</option>
-                                <option value="9 months">9 Months</option>
-                                <option value="1 year">1 Year</option>
-                                <option value="1.5 years">1.5 Years</option>
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="savings-goal">Savings Goal:</label>
-                            <input
-                                type="number"
-                                id="savings-goal"
-                                placeholder="Enter your goal"
-                                value={savingsGoal}
-                                onChange={handleSavingsGoalChange}
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="frequency">Saving Frequency:</label>
-                            <select id="frequency" value={frequency} onChange={handleFrequencyChange}>
-                                <option value="weekly">Every Week</option>
-                                <option value="biweekly">Every Other Week</option>
-                                <option value="monthly">Once a Month</option>
-                            </select>
-                        </div>
-                        <button className="calc-btn"
-                            onClick={() => {
-                                setIsShowingResults(true);
-                            }}
-                        >
-                            Calculate
-                        </button>
-                    </div>
-                </div>
-            )}
-
-            {isShowingResults && (
-                <div className="results">
-                    <ProjectedResults
-                        savingsGoal={savingsGoal}
-                        timeframe={timeframe}
-                        frequency={frequency}
-                        startDate={startDate}
-                        endDate={endDate}
-                        setIsShowingResults={setIsShowingResults}
-                    />
-                </div>
-            )}
-        </div>
-    );
+      {isShowingResults && (
+        <Box sx={{ textAlign: "center" }}>
+          <Typography variant="h6">Projected Savings</Typography>
+          <Typography variant="body1">
+            To save <strong>${savingsGoal}</strong> over <strong>{timeframe}</strong>, you need to save
+            <strong> ${calculateSavingsPerInterval()}</strong> per <strong>{frequency}</strong>.
+          </Typography>
+          <Button variant="outlined" color="secondary" onClick={() => setIsShowingResults(false)}>
+            Back
+          </Button>
+        </Box>
+      )}
+    </Box>
+  );
 };
 
 export default ProjectionsCard;
-
-const ProjectedResults = ({ savingsGoal, timeframe, frequency, startDate, endDate, setIsShowingResults }) => {
-
-    const calculateSavingsPerInterval = () => {
-        const timeframesInMonths = {
-            "3 months": 3,
-            "6 months": 6,
-            "9 months": 9,
-            "1 year": 12,
-            "1.5 years": 18,
-        };
-    
-        const intervalsPerMonth = {
-            weekly: 4,
-            biweekly: 2,
-            monthly: 1,
-        };
-    
-        const months = timeframesInMonths[timeframe] || 0; 
-        const intervals = months * (intervalsPerMonth[frequency] || 0); 
-    
-        // console.log("Timeframe:", timeframe, "Frequency:", frequency, "Savings Goal:", savingsGoal);
-        // console.log("Months:", months, "Intervals:", intervals);
-    
-        return intervals > 0 ? savingsGoal / intervals : 0;
-    };
-
-    return (
-        <div className="projected-results">
-            <h4 className="results-title">Projected Savings</h4>
-            <div className="results-contents">
-                <p className="results-date">From <span className="highlight">{startDate.toLocaleDateString()}</span> to <span className="highlight">{endDate ? endDate.toLocaleDateString() : "N/A"}</span>:</p>
-                <p className="results-goal">If you want to save <span className="highlight">${savingsGoal}</span>, then:</p> 
-                <p className="results-interval">You need to save <span className="highlight">${calculateSavingsPerInterval().toFixed(2)}</span> <span className="highlight">{frequency}</span>.</p>
-            </div>
-            <div className="back-btn-wrapper"> 
-                <button className="back-btn" onClick={() => setIsShowingResults(false)}>
-                    Back
-                </button>
-            </div>
-        </div>  
-    );
-};

@@ -1,25 +1,42 @@
-import { useEffect, useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
+import {
+  Box,
+  Tabs,
+  Tab,
+  Typography,
+  TextField,
+  Button,
+  Divider,
+  Switch,
+  FormControlLabel,
+} from "@mui/material";
 import { usePlaidLink } from "react-plaid-link";
-// import ToggleButton from "./togglebutton";
 import axios from "axios";
-//comment out to turn off redirections
 import api from "../../../../api";
 import plaidLogo from "../../../../assets/plaidlogo.png";
 import "../../../../styles/components/modal/settings.scss";
 
 const SettingsBlock = () => {
-    const [linkToken, setLinkToken] = useState(null);
-    const [isLoggedIn, setIsLoggedIn] = useState(false);
-    const [settings, setSettings] = useState({
-        email_notifications: false,
-        sms_notifications: false,
-        push_notifications: false,
-    });
-    const [userInfo, setUserInfo] = useState({
-        username:"",
-        email: "",
-        phone_number: "",
-    });
+  const [tabIndex, setTabIndex] = useState(0);
+  const [linkToken, setLinkToken] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [settings, setSettings] = useState({
+    email_notifications: false,
+    sms_notifications: false,
+    push_notifications: false,
+  });
+  const [userInfo, setUserInfo] = useState({
+    email: "",
+    phone_number: "",
+  });
+  const [passwords, setPasswords] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [editingField, setEditingField] = useState(null);
+  const [tempUserInfo, setTempUserInfo] = useState({});
+  const [editingPassword, setEditingPassword] = useState(false);
 
   // Check if user is already linked to Plaid
   useEffect(() => {
@@ -40,488 +57,404 @@ const SettingsBlock = () => {
   }, []);
 
   // Fetch link token for Plaid Link flow
-
-    useEffect(() => {
-        const fetchLinkToken = async () => {
-            try {
-                const token = localStorage.getItem("token");
-                const response = await axios.post(
-                    "http://localhost:8000/create_link_token/",
-                    {},
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                        withCredentials: true,
-                    }
-                );
-                setLinkToken(response.data.link_token);
-            } catch (error) {
-                console.error(
-                    "Error fetching Plaid link token:", 
-                    error.response ? error.response.data : error
-                );
-            }
-        };
-
-        const fetchUserSettings = async () => {
-            try {
-                const token = localStorage.getItem("token");
-                const response = await axios.get(
-                    "http://localhost:8000/user_settings/", // change made by Thomas Pearson
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                        withCredentials: true,
-                    }
-                );
-                console.log("Fetched user settings:", response.data); //debug
-                setSettings(response.data);
-            } catch (error) {
-                console.error("Error fetching user settings:", error.response ? error.response.data : error);
-            }
-        };
-
-        const fetchUserInfo = async () => {
-            try {
-                const token = localStorage.getItem("token");
-                const response = await axios.get(
-                    "http://localhost:8000/user_info/",
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                        withCredentials: true,
-                    }
-                );
-                setUserInfo(response.data);
-            } catch (error) {
-                console.error("Error fetching user info:", error.response ? error.response.data : error);
-            }
-        };
-
-        fetchLinkToken();
-        fetchUserSettings();
-        fetchUserInfo();
-    }, []);
-
-    // Handle successful Plaid Link connection
-    const onSuccess = useCallback(async (publicToken, metadata) => {
-        try {
-            const token = localStorage.getItem("token");
-            await axios.post(
-                "http://localhost:8000/exchange_public_token/",
-                { 
-                    public_token: publicToken,
-                    account_type: "bank"
-                },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
-            setIsLoggedIn(true);
-            
-            // Fetch investment data after successful Plaid connection
-            try {
-                await axios.get(
-                    "http://localhost:8000/investments/",
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                        withCredentials: true,
-                    }
-                );
-                
-            } catch (error) {
-                console.error(
-                    "Error importing investment data:",
-                    error.response ? error.response.data : error
-                );
-            }
-        } catch (error) {
-            console.error(
-                "Error exchanging public token:",
-                error.response ? error.response.data : error
-            );
-        }
-    }, []);
-
-    const handleToggleChange = async (name, value) => { //chaning notif setting/toggle buttons (sigh)
-    
-        try {
-            const token = localStorage.getItem("token");
-            console.log("Token:", token); //debug 
-            const updatedSettings = { ...settings, [name]: value };
-
-            setSettings(updatedSettings);
-
-            console.log("Sending updated settings:", updatedSettings); //for debug
-
-            await axios.post( //send settings
-                "http://localhost:8000/user_settings/",
-                updatedSettings,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
-
-            const response = await axios.get( //fetch the settings to update the state
-                "http://localhost:8000/user_settings/",
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
-
-            console.log("Updated settings fetched from backend:", response.data); //debug
-
-            setSettings(response.data);
-
-        } catch (error) {
-            console.error("Error updating user settings:", error.response ? error.response.data : error);
-        }
-    };
-
-    const handleUpdateUser = async (updateData) => { //updating user creds
-        try {
-            const token = localStorage.getItem("token");
-            await axios.post(
-                "http://localhost:8000/auth/update/",
-                updateData,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
-            alert("User account settings updated successfully");
-            // fetch updated user info
-            const response = await axios.get(
-                "http://localhost:8000/user_info/",
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
-            setUserInfo(response.data);
-        } catch (error) {
-            console.error("Error updating user settings:", error.response ? error.response.data : error);
-        }
-    };
-
-    const config = linkToken //plaid link token
-        ? {
-              token: linkToken,
-              onSuccess,
+  useEffect(() => {
+    const fetchLinkToken = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.post(
+          "http://localhost:8000/create_link_token/",
+          {},
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
           }
-        : null;
+        );
+        setLinkToken(response.data.link_token);
+      } catch (error) {
+        console.error(
+          "Error fetching Plaid link token:",
+          error.response ? error.response.data : error
+        );
+      }
+    };
 
-    const { open, ready } = usePlaidLink(config || {});
+    const fetchUserSettings = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "http://localhost:8000/user_settings/", // change made by Thomas Pearson
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
+        console.log("Fetched user settings:", response.data); //debug
+        setSettings(response.data);
+      } catch (error) {
+        console.error("Error fetching user settings:", error.response ? error.response.data : error);
+      }
+    };
 
-    return (
-        <div className="settings-content">
-            <h2>Settings</h2>
-            <AccountSettings userInfo={userInfo} onUpdateUser={handleUpdateUser} />
-            <NotificationSettings settings={settings} onToggleChange={handleToggleChange} />
-            <FinanceSettings isLoggedIn={isLoggedIn} linkToken={linkToken} open={open} ready={ready} setIsLoggedIn={setIsLoggedIn} />
-        </div>
-    );
+    const fetchUserInfo = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "http://localhost:8000/user_info/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
+        setUserInfo(response.data);
+      } catch (error) {
+        console.error("Error fetching user info:", error.response ? error.response.data : error);
+      }
+    };
+
+    fetchLinkToken();
+    fetchUserSettings();
+    fetchUserInfo();
+  }, []);
+
+  // Handle successful Plaid Link connection
+  const onSuccess = useCallback(async (publicToken, metadata) => {
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(
+        "http://localhost:8000/exchange_public_token/",
+        { 
+          public_token: publicToken,
+          account_type: "bank"
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+      setIsLoggedIn(true);
+      
+      // Fetch investment data after successful Plaid connection
+      try {
+        await axios.get(
+          "http://localhost:8000/investments/",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
+        
+      } catch (error) {
+        console.error(
+          "Error importing investment data:",
+          error.response ? error.response.data : error
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Error exchanging public token:",
+        error.response ? error.response.data : error
+      );
+    }
+  }, []);
+
+  const handleTabChange = (event, newValue) => {
+    setTabIndex(newValue);
+  };
+
+  const handlePlaidSuccess = useCallback(async (publicToken) => {
+    try {
+      const response = await fetch("/api/plaid/exchange-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ public_token: publicToken }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to exchange Plaid token");
+      }
+      setIsLoggedIn(true);
+    } catch (error) {
+      console.error("Error exchanging Plaid token:", error);
+    }
+  }, []);
+
+  const handleEditField = (field) => {
+    setEditingField(field);
+    setTempUserInfo({ ...userInfo });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingField(null);
+    setTempUserInfo({});
+  };
+
+  const handleSaveField = async (field) => {
+    try {
+      const updatedInfo = { [field]: tempUserInfo[field] };
+      const response = await fetch("/api/user-info", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(updatedInfo),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update user info");
+      }
+      setUserInfo((prev) => ({ ...prev, ...updatedInfo }));
+      setEditingField(null);
+      setTempUserInfo({});
+      alert("User info updated successfully");
+    } catch (error) {
+      console.error("Error updating user info:", error);
+    }
+  };
+
+  const handlePasswordChange = (field, value) => {
+    setPasswords((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSavePassword = async () => {
+    if (passwords.newPassword !== passwords.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
+    try {
+      const response = await fetch("/api/user-password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(passwords),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to update password");
+      }
+      alert("Password updated successfully");
+      setEditingPassword(false);
+      setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (error) {
+      console.error("Error updating password:", error);
+    }
+  };
+
+  const handleCancelPasswordEdit = () => {
+    setEditingPassword(false);
+    setPasswords({ oldPassword: "", newPassword: "", confirmPassword: "" });
+  };
+
+  const handleToggleChange = (name, value) => {
+    setSettings((prev) => ({ ...prev, [name]: value }));
+  };
+
+  return (
+    <Box>
+      <Tabs value={tabIndex} onChange={handleTabChange} centered>
+        <Tab label="Account" />
+        <Tab label="Notifications" />
+      </Tabs>
+      {tabIndex === 0 && (
+        <Box sx={{ p: 3 }}>
+          <Typography variant="h6">Account Information</Typography>
+          <Box sx={{ mt: 2 }}>
+            <Typography>Email: {userInfo.email}</Typography>
+            {editingField === "email" ? (
+              <>
+                <TextField
+                  value={tempUserInfo.email}
+                  onChange={(e) =>
+                    setTempUserInfo((prev) => ({ ...prev, email: e.target.value }))
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => handleSaveField("email")}
+                  sx={{ mt: 1, mr: 1 }}
+                >
+                  Save
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={handleCancelEdit}
+                  sx={{ mt: 1 }}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => handleEditField("email")}
+                sx={{ mt: 1 }}
+              >
+                Edit
+              </Button>
+            )}
+          </Box>
+
+          <Box sx={{ mt: 2 }}>
+            <Typography>Phone Number: {userInfo.phone_number}</Typography>
+            {editingField === "phone_number" ? (
+              <>
+                <TextField
+                  value={tempUserInfo.phone_number}
+                  onChange={(e) =>
+                    setTempUserInfo((prev) => ({
+                      ...prev,
+                      phone_number: e.target.value,
+                    }))
+                  }
+                  fullWidth
+                  margin="normal"
+                />
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => handleSaveField("phone_number")}
+                  sx={{ mt: 1, mr: 1 }}
+                >
+                  Save
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="secondary"
+                  onClick={handleCancelEdit}
+                  sx={{ mt: 1 }}
+                >
+                  Cancel
+                </Button>
+              </>
+            ) : (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={() => handleEditField("phone_number")}
+                sx={{ mt: 1 }}
+              >
+                Edit
+              </Button>
+            )}
+          </Box>
+
+          <Divider sx={{ my: 4 }} />
+
+          <Typography variant="h6">Password</Typography>
+          {editingPassword ? (
+            <>
+              <TextField
+                label="Old Password"
+                type="password"
+                value={passwords.oldPassword}
+                onChange={(e) => handlePasswordChange("oldPassword", e.target.value)}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="New Password"
+                type="password"
+                value={passwords.newPassword}
+                onChange={(e) => handlePasswordChange("newPassword", e.target.value)}
+                fullWidth
+                margin="normal"
+              />
+              <TextField
+                label="Confirm Password"
+                type="password"
+                value={passwords.confirmPassword}
+                onChange={(e) => handlePasswordChange("confirmPassword", e.target.value)}
+                fullWidth
+                margin="normal"
+              />
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleSavePassword}
+                sx={{ mt: 1, mr: 1 }}
+              >
+                Save
+              </Button>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={handleCancelPasswordEdit}
+                sx={{ mt: 1 }}
+              >
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => setEditingPassword(true)}
+              sx={{ mt: 1 }}
+            >
+              Edit Password
+            </Button>
+          )}
+
+          <Divider sx={{ my: 4 }} />
+
+          <Typography variant="h6">Plaid Connection</Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={isLoggedIn ? null : () => {}}
+            sx={{ mt: 2 }}
+          >
+            {isLoggedIn ? "Connected to Plaid" : "Connect to Plaid"}
+          </Button>
+        </Box>
+      )}
+      {tabIndex === 1 && (
+        <Box sx={{ p: 3, display: "flex", flexDirection: "column", gap: 2 }}>
+          <Typography variant="h6">Notification Settings</Typography>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={settings.email_notifications}
+                onChange={(e) =>
+                  handleToggleChange("email_notifications", e.target.checked)
+                }
+              />
+            }
+            label="Email Notifications"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={settings.sms_notifications}
+                onChange={(e) =>
+                  handleToggleChange("sms_notifications", e.target.checked)
+                }
+              />
+            }
+            label="SMS Notifications"
+          />
+          <FormControlLabel
+            control={
+              <Switch
+                checked={settings.push_notifications}
+                onChange={(e) =>
+                  handleToggleChange("push_notifications", e.target.checked)
+                }
+              />
+            }
+            label="Push Notifications"
+          />
+        </Box>
+      )}
+    </Box>
+  );
 };
 
 export default SettingsBlock;
-
-const AccountSettings = ({ userInfo, onUpdateUser }) => {
-    const [email, setEmail] = useState("");
-    const [phoneNumber, setPhoneNumber] = useState("");
-    const [oldPassword, setOldPassword] = useState("");
-    const [newPassword, setNewPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
-    const [showEmailForm, setShowEmailForm] = useState(false);
-    const [showPhoneForm, setShowPhoneForm] = useState(false);
-    const [showPasswordForm, setShowPasswordForm] = useState(false);
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        const updateData = {};
-        if (email) updateData.email = email;
-        if (phoneNumber) updateData.phone_number = phoneNumber;
-        if (newPassword) updateData.password = newPassword;
-        onUpdateUser(updateData);
-        setShowEmailForm(false);
-        setShowPhoneForm(false);
-        setShowPasswordForm(false);
-    };
-
-    return (
-        <div className="settings-section">
-            <h3>Account</h3>
-            <div className={`account-block ${showEmailForm ? "expanded" : ""}`}>
-                <p>Email: {userInfo.email}</p>
-                <button onClick={() => setShowEmailForm(!showEmailForm)} className={`form-btn ${showEmailForm ? "expanded" : ""}`}>
-                    Edit
-                    <span className="arrow">▼</span>
-                </button>
-                <div className="submit-container">
-                {showEmailForm && (
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-block">
-                            <label style={{fontSize: "small"}}>New Email: </label>
-                            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="input-updated" />
-                            <button type="submit" className="submit-btn">Update</button>
-                        </div>
-                    </form>
-                )}</div>
-                
-            </div>
-            <div className={`account-block ${showPhoneForm ? "expanded" : ""}`}>
-                <p>Phone Number: {userInfo.phone_number}</p>
-                <button onClick={() => setShowPhoneForm(!showPhoneForm)} className={`form-btn ${showPhoneForm ? "expanded" : ""}`}>
-                    Edit
-                    <span className="arrow">▼</span>
-                </button>
-                <div className="submit-container">
-                {showPhoneForm && (
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-block">
-                            <label style={{fontSize: "small"}}>New Number:</label>
-                            <input type="text" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} />
-                            <button type="submit" className="submit-btn"> Update</button>
-                        </div>
-                    </form>
-                )}</div>
-                
-            </div>
-            <div className={`account-block ${showPasswordForm ? "expanded" : ""}`}>
-                <p>Password: </p>
-                <button onClick={() => setShowPasswordForm(!showPasswordForm)} className={`form-btn ${showPasswordForm ? "expanded" : ""}`}>
-                    Edit
-                    <span className="arrow">▼</span>
-                </button>
-                <div className="submit-container">
-                {showPasswordForm && (
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-block">
-                            <label style={{fontSize: "small"}}>Old Password: </label>
-                            <input type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} />
-                        </div>
-                        <div className="form-block">
-                            <label style={{fontSize: "small"}}>New Password: </label>
-                            <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
-                        </div>
-                        <div className="form-block">
-                            <label style={{fontSize: "small"}}>Confirm Password: </label>
-                            <input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
-                        </div>
-                            <button type="submit" className="submit-btn">Update</button>
-                        
-                    </form>
-                )}
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const NotificationSettings = ({ settings, onToggleChange }) => {
-    return (
-        <div className="settings-section">
-            <h3>Notifications</h3>
-            <div className="notif-block">
-                <p>Email Notifications:</p>
-                <div className="toggle">
-                    <ToggleButton
-                        label="Email Notifications"
-                        checked={settings.email_notifications}
-                        onChange={(value) => onToggleChange("email_notifications", value)}
-                    />
-                </div>
-            </div>
-            <div className="notif-block">
-                <p>SMS Notifications:</p>
-                <div className="toggle">
-                    <ToggleButton
-                        label="SMS Notifications"
-                        checked={settings.sms_notifications}
-                        onChange={(value) => onToggleChange("sms_notifications", value)}
-                    />
-                </div>
-            </div>
-            <div className="notif-block">
-                <p>Push Notifications:</p>
-                <div className="toggle">
-                    <ToggleButton
-                        label="Push Notifications"
-                        checked={settings.push_notifications}
-                        onChange={(value) => onToggleChange("push_notifications", value)}
-                    />
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const FinanceSettings = ({ isLoggedIn, linkToken, open, ready, setIsLoggedIn }) => {
-    const [brokerageLinkToken, setBrokerageLinkToken] = useState(null);
-    const [isBrokerageConnected, setIsBrokerageConnected] = useState(false);
-    
-    // Fetch brokerage link token
-    useEffect(() => {
-        const fetchBrokerageLinkToken = async () => {
-            try {
-                const token = localStorage.getItem("token");
-                const response = await axios.post(
-                    "http://localhost:8000/create_link_token/",
-                    { product: "investments" },
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                        withCredentials: true,
-                    }
-                );
-                setBrokerageLinkToken(response.data.link_token);
-            } catch (error) {
-                console.error(
-                    "Error fetching brokerage link token:", 
-                    error.response ? error.response.data : error
-                );
-            }
-        };
-        
-        if (isLoggedIn) {
-            fetchBrokerageLinkToken();
-        }
-    }, [isLoggedIn]);
-    
-    // Check if brokerage is connected
-    useEffect(() => {
-        const checkBrokerageStatus = async () => {
-            try {
-                const token = localStorage.getItem("token");
-                await axios.get(
-                    "http://localhost:8000/investments/",
-                    {
-                        headers: { Authorization: `Bearer ${token}` },
-                        withCredentials: true,
-                    }
-                );
-                setIsBrokerageConnected(true);
-            } catch (error) {
-                setIsBrokerageConnected(false);
-            }
-        };
-        
-        if (isLoggedIn) {
-            checkBrokerageStatus();
-        }
-    }, [isLoggedIn]);
-    
-    // Merge Item: Function to call the unlink endpoint
-    const handleUnlink = async () => {
-        try {
-        const token = localStorage.getItem("token");
-        await axios.delete("http://localhost:8000/unlink", {
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true,
-        });
-        setIsLoggedIn(false);
-        setIsBrokerageConnected(false);
-        } catch (error) {
-        console.error(
-            "Error unlinking Plaid account:",
-            error.response ? error.response.data : error
-        );
-        }
-    };
-    
-    // Function to connect brokerage account
-    const handleConnectBrokerage = async () => {
-        try {
-            const token = localStorage.getItem("token");
-            await axios.get(
-                "http://localhost:8000/investments/",
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
-            setIsBrokerageConnected(true);
-        } catch (error) {
-            console.error(
-                "Error connecting brokerage account:",
-                error.response ? error.response.data : error
-            );
-            alert("Error connecting brokerage account. Please try again later.");
-        }
-    };
-    
-    // Configuration for brokerage Plaid Link
-    const brokerageConfig = brokerageLinkToken
-        ? {
-              token: brokerageLinkToken,
-              onSuccess: async (publicToken, metadata) => {
-                  try {
-                      const token = localStorage.getItem("token");
-                      await axios.post(
-                          "http://localhost:8000/exchange_public_token/",
-                          { 
-                              public_token: publicToken,
-                              account_type: "brokerage"
-                          },
-                          {
-                              headers: { Authorization: `Bearer ${token}` },
-                              withCredentials: true,
-                          }
-                      );
-                      setIsBrokerageConnected(true);
-                      
-                      // Fetch investment data after successful brokerage connection
-                      try {
-                          await axios.get(
-                              "http://localhost:8000/investments/",
-                              {
-                                  headers: { Authorization: `Bearer ${token}` },
-                                  withCredentials: true,
-                              }
-                          );
-                          console.log("Investment data imported successfully");
-                      } catch (error) {
-                          console.error(
-                              "Error importing investment data:",
-                              error.response ? error.response.data : error
-                          );
-                      }
-                  } catch (error) {
-                      console.error(
-                          "Error exchanging public token:",
-                          error.response ? error.response.data : error
-                      );
-                  }
-              },
-          }
-        : null;
-    
-    const { open: openBrokerage, ready: brokerageReady } = usePlaidLink(brokerageConfig || {});
-    
-    return (
-        <div className="settings-section">
-        <h3>Connect your Bank Account</h3>
-        {/* <p>{isLoggedIn ? "Logged into Plaid" : "Not logged into Plaid"}</p> */}
-        <button
-            onClick={isLoggedIn ? handleUnlink : () => open()}
-            disabled={!ready && !isLoggedIn}
-            className="plaid"
-        >
-            <img src={plaidLogo} alt="Plaid Logo" className="plaid-logo" />
-            {isLoggedIn ? "Unlink Plaid" : "Log into Plaid"}
-        </button>
-        
-        {isLoggedIn && (
-            <div className="investment-actions">
-                <h4>Connect Brokerage Account</h4>
-                <button 
-                    onClick={isBrokerageConnected ? handleConnectBrokerage : () => openBrokerage()}
-                    disabled={!brokerageReady && !isBrokerageConnected}
-                    className="brokerage-button"
-                >
-                    <img src={plaidLogo} alt="Plaid Logo" className="plaid-logo" />
-                    {isBrokerageConnected ? "Refresh Brokerage Data" : "Connect Brokerage"}
-                </button>
-            </div>
-        )}
-    </div>
-    );
-};

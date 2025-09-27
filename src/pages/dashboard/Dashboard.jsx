@@ -9,7 +9,7 @@ import "../../styles/pages/dashboard/dashboard.scss";
 
 const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
-    <div className="dashboard-layout">
+    <div className="dashboard-layout" style={{ paddingTop: "64px" }}>
       <DbNavbar isAuthenticated={isAuthenticated} setIsAuthenticated={setIsAuthenticated}/>
       <div className="main-content">
         <Sidebar setIsAuthenticated={setIsAuthenticated}/>

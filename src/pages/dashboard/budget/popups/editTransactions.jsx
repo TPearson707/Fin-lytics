@@ -1,6 +1,16 @@
 import React, { useState, useEffect } from "react";
+import {
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Button,
+    Typography,
+    List,
+    ListItem,
+    ListItemText,
+} from "@mui/material";
 import axios from "axios";
-import "../../../../styles/pages/dashboard/budget-page/popups/edit-trans.scss";
 
 const EditTransactions = ({ onClose }) => {
     const [transactions, setTransactions] = useState([]);
@@ -46,60 +56,54 @@ const EditTransactions = ({ onClose }) => {
     );
 
     return (
-        <div className="modal" onClick={onClose}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <button className="close-btn" onClick={onClose}>
-                    x
-                </button>
-                <h2>Edit Transactions</h2>
-                <p>Add/Remove/Edit Transactions.</p>
+        <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+            <DialogTitle>Edit Transactions</DialogTitle>
+            <DialogContent>
+                <Typography variant="body1" gutterBottom>
+                    Add/Remove/Edit Transactions.
+                </Typography>
 
-                <div className="recent-transactions">
-                    <p>Recent Transactions:</p>
-                    <div className="transaction-list">
-                        <ul>
-                            {paginatedTransactions.map((transaction) => (
-                                <li key={transaction.transaction_id} className="transaction-item">
-                                    <div className="transaction-row">
-                                        <span className="transaction-date">{transaction.date}</span>
-                                        <span className="transaction-name">{transaction.merchant_name || transaction.category}</span>
-                                        <span className="transaction-amount">
-                                            ${transaction.amount.toFixed(2)}
-                                        </span>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
+                <Typography variant="h6">Recent Transactions:</Typography>
+                <List>
+                    {paginatedTransactions.map((transaction) => (
+                        <ListItem key={transaction.transaction_id} divider>
+                            <ListItemText
+                                primary={transaction.merchant_name || transaction.category}
+                                secondary={`Date: ${transaction.date} | Amount: $${transaction.amount.toFixed(2)}`}
+                            />
+                        </ListItem>
+                    ))}
+                </List>
 
-                <div className="carousel-controls">
-                    <button
-                        type="button"
-                        className="prev-button"
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 16 }}>
+                    <Button
+                        variant="contained"
                         onClick={handlePrevPage}
                         disabled={currentPage === 0}
                     >
-                        ←
-                    </button>
-                    <span>
+                        Previous
+                    </Button>
+                    <Typography>
                         Page {currentPage + 1} of {totalPages}
-                    </span>
-                    <button
-                        type="button"
-                        className="next-button"
+                    </Typography>
+                    <Button
+                        variant="contained"
                         onClick={handleNextPage}
                         disabled={currentPage === totalPages - 1}
                     >
-                        →
-                    </button>
+                        Next
+                    </Button>
                 </div>
-
-                <button type="button" className="add-button">
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={onClose} color="secondary">
+                    Close
+                </Button>
+                <Button variant="contained" color="primary">
                     Add Transaction
-                </button>
-            </div>
-        </div>
+                </Button>
+            </DialogActions>
+        </Dialog>
     );
 };
 
