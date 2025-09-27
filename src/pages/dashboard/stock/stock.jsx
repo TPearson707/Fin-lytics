@@ -6,6 +6,7 @@ function Stock() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // List of stock tickers to generate predictions for
   const tickers = [
     "NVDA", "MSFT", "AAPL", "AMZN", "GOOGL",
     "META", "BRK.B", "TSLA", "AVGO", "PLTR", "VOO",

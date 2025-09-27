@@ -12,6 +12,31 @@
     text-align: center;
   }
 
+  &__button {
+    margin-bottom: 1rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: 1px solid #7ea5de;
+    border-radius: 8px;
+    background-color: #ebf4ff;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+
+    &:hover {
+      background-color: #dbeafe;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+  }
+
   &__table {
     width: 100%;
     border-collapse: collapse;
