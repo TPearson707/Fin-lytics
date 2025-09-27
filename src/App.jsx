@@ -13,7 +13,7 @@ import IntroNavbar from "./components/intro/IntroNavbar";
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#609978',
+      main: '#749181',
     },
     secondary: {
       main: '#E0C2FF',

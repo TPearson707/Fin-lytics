@@ -1,0 +1,89 @@
+//editTransactions
+
+.modal-content{
+    display: flex;
+    flex-direction: column;
+    
+}
+
+.recent-transactions{
+    width: 100%;
+    justify-content: flex-start;
+    align-items: flex-start;
+    display: flex;
+    flex-direction: column;
+    margin-top: 10px;
+}
+
+.transaction-list{
+    padding: 10px ;
+    background-color: #f0f4f0;
+    width: 100%;
+    border-radius: 8px;
+    border-color: 1px #c4d2c4;
+    
+    ul{
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        
+        
+        li{
+            text-align: left;
+        }
+        li:hover{
+            cursor: pointer;
+            background-color: #e1e4e1;
+        }
+    }
+
+    .transaction-row {
+        display: flex;
+        justify-content: space-between; 
+        align-items: center; 
+        padding: 5px 0; 
+        border-bottom: 1px solid #e0e0e0; 
+      }
+      
+      .transaction-date,
+      .transaction-name,
+      .transaction-amount {
+        flex: 1; 
+        text-align: center; 
+      }
+      
+      .transaction-date {
+        text-align: left; 
+      }
+      
+      .transaction-amount {
+        text-align: right; 
+      }
+}
+
+.add-button{
+    width: 150px;
+    margin-left: auto;
+    font-family: quicksand;
+    border-radius: 5px;
+    border-color: #c4d2c4;
+    &:hover{
+        cursor: pointer;
+        background-color: #e1e4e1;
+    }
+}
+
+.next-button, .prev-button{
+    width: 25px;
+    border-radius: 10px;
+    margin: 10px;
+    font-family: quicksand;
+    border: 1px solid #c4d2c4;
+
+    &:hover{
+        cursor: pointer;
+        background-color: #e1e4e1;
+    }
+}
+
+

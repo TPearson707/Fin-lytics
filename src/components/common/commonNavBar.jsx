@@ -10,24 +10,25 @@ import Modal from "./modal/modal";
 import NotificationBlock from "./modal/notifs";
 import SettingsBlock from "./modal/settings/settings";
 import LogoutBlock from "./modal/logout";
+import Box from '@mui/material/Box';
+import Toolbar from '@mui/material/Toolbar';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import AppBar from '@mui/material/AppBar';
+import NotificationsIcon from '@mui/icons-material/Notifications';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 
 const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
     const [user, setUser] = useState(null);
-    const [isOpen, setIsOpen] = useState(false); 
+    const [isOpen, setIsOpen] = useState(false);
     const [isNotifOpen, setIsNotifOpen] = useState(false);
     const [isModalOpen, setModalOpen] = useState(false);
     const [modalContent, setModalContent] = useState(null);
     const navigate = useNavigate();
 
-    // const handleLogout = () => {
-    //     localStorage.removeItem("token");
-    //     setIsAuthenticated(false);
-    //     navigate("/");
-    // };
-
     const handleLogout = () => {
-        localStorage.removeItem("token"); 
-        window.location.href = "/login"; 
+        localStorage.removeItem("token");
+        window.location.href = "/login";
     };
 
     const getUser = async () => {
@@ -58,7 +59,7 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
 
     const toggleProfileDropdown = () => {
         setIsOpen((prev) => !prev);
-        setIsNotifOpen(false); 
+        setIsNotifOpen(false);
     };
 
     const toggleNotifDropdown = () => {
@@ -78,31 +79,20 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
 
     return (
         <>
-            <div className="navbar">
-                <div className="nav-left">
-                    <Link to="/"><img src={finLogo} alt="Logo" className="logo" /></Link>
-                </div>
-                <div className="nav-mid">
-                    <ul>
-                        {/* hello */}
-                    </ul>
-                </div>
-                <div className="nav-right">
-                    <div className="notif-container">
-                        <button className="notifbtn" onClick={toggleNotifDropdown}>
-                            <FontAwesomeIcon icon={faBell} size="2xl" />
-                        </button>
+            <Box>
+                <AppBar position="static" sx={{ backgroundColor: 'white', color: 'black', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                    <Toolbar>
+                        <Link to="/">
+                            <img src={finLogo} alt="Logo" style={{ height: '35px', marginRight: '10px', cursor: 'pointer' }} />
+                        </Link>
+                        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+                        </Typography>
+                        <Button color="inherit" onClick={toggleNotifDropdown}><NotificationsIcon fontSize="large" sx={{ color: "primary" }}/></Button>
                         <div className="notif-content">
                             {isNotifOpen && <NotificationBlock />}
                         </div>
-                    </div>
-
-                    <div className="profilebtn-container">
-                        <button className="profilebtn" onClick={toggleProfileDropdown}>
-                            {/* {user && <span className="profile-icon-text">{user.firstName}</span>} */}
-                            <FontAwesomeIcon icon={faCircleUser} size="2xl" />
-                        </button>
-                        {isOpen && (
+                        <Button color="inherit" onClick={toggleProfileDropdown}><AccountCircleIcon fontSize="large"/></Button>
+                         {isOpen && (
                             <ProfileContent
                                 user={user}
                                 openModal={openModal}
@@ -110,9 +100,10 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
                                 navigate={navigate}
                             />
                         )}
-                    </div>
-                </div>
-            </div>
+                    </Toolbar>
+                </AppBar>
+            </Box>
+        
             {isModalOpen && (
                 <div className="modal-overlay">
                     <div className="modal-content">

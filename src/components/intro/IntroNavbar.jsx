@@ -14,7 +14,7 @@ const IntroNavbar = () => {
         <Box sx={{ flexGrow: 1 }}>
             <AppBar position="static" sx={{ backgroundColor: 'white', color: 'black' }}>
                 <Toolbar>
-                    <IconButton
+                    {/* <IconButton
                         size="large"
                         edge="start"
                         color="inherit"
@@ -22,7 +22,7 @@ const IntroNavbar = () => {
                         sx={{ mr: 2 }}
                     >
                         <MenuIcon />
-                    </IconButton>
+                    </IconButton> */}
                     <Link to="/">
                         <img src={finLogo} alt="Logo" style={{ height: '35px', marginRight: '10px', cursor: 'pointer' }} />
                     </Link>

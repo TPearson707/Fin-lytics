@@ -1,0 +1,181 @@
+//budget projections
+.projections-card {
+    font-family: 'Quicksand', sans-serif;
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+
+    .card-header {
+        font-size: 24px;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+    }
+
+    .card-body {
+    border-radius: 10px;
+    background-color: #f9f9f9;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+
+
+        .selectors {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+
+            .form-group {
+                display: flex;
+                flex-direction: column;
+                gap: 5px;
+
+                label {
+                    font-size: 16px;
+                    font-weight: bold;
+                    color: #555;
+                }
+
+                select, input {
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    font-size: 14px;
+                    font-family: 'Quicksand', sans-serif;
+                    background-color: #fff;
+                    color: #333;
+                    transition: border-color 0.3s;
+
+                    &:focus {
+                        outline: none;
+                        border-color: #007bff;
+                    }
+                }
+            }
+
+            .calc-btn{
+                background-color: #23744e;
+                color: white;
+                border: none;
+                padding: 10px 15px;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 16px;
+                font-weight: bold;
+                transition: background-color 0.3s;
+
+                &:hover {
+                    background-color: #1f5133;
+                }
+            }
+        }
+
+        .results {
+            display: flex;
+            margin-top: 20px;
+            font-size: 16px;
+            color: #333;
+            height: 100%;
+            font-family: 'Quicksand', sans-serif;
+
+            p {
+                line-height: 1.5;
+                margin: 10px 0;
+            }
+
+            
+            }
+        }
+        .back-btn { 
+            background-color: #23744e;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px; 
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s; 
+            transform: translate(0, 0);
+
+            &:hover {
+                background-color: #1f5133; 
+            }
+
+        }
+    }
+
+
+.projected-results {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.results-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.results-contents {
+    font-size: 1rem;
+    color: #555;
+    line-height: 1.6;
+}
+
+.highlight {
+    font-weight: bold;
+    color: #267a37;
+}
+
+.results-date,
+.results-goal,
+.results-interval {
+    margin-bottom: 8px;
+}
+
+//transactions
+
+.transaction-card {
+    .transactions-list {
+        max-height: 400px; // Match the height of the pie chart
+        overflow-y: auto;
+        
+        .transaction-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background-color: white;
+            border-radius: 8px;
+
+            .transaction-info {
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+
+                .merchant {
+                    font-weight: 700;
+                    font-size: 1rem;
+                    color: #1a1a1a;
+                }
+
+                .date {
+                    font-size: 0.875rem;
+                    color: #666;
+                }
+            }
+
+            .amount {
+                font-size: 1.125rem;
+                font-weight: 600;
+                text-align: right;
+                color: #dc2626; // Always red
+            }
+        }
+    }
+}
