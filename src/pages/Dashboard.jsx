@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "../../components/common/Sidebar";
-import DbNavbar from "../../components/common/commonNavBar";
+import Sidebar from "../components/common/Sidebar";
+import DbNavbar from "../components/common/commonNavBar";
 import Budget from "./budget/budget";
 import Portfolio from "./portfolio/portfolio";
 import Stock from "./stock/stock";
-import "../../styles/pages/dashboard/dashboard.scss";
+import "../styles/pages/dashboard/dashboard.scss";
 
 const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
   return (

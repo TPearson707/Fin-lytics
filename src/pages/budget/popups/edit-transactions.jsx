@@ -11,6 +11,7 @@ import {
     ListItemText,
 } from "@mui/material";
 import axios from "axios";
+import AddTransactionDialog from "./AddTransactionDialog";
 
 const EditTransactions = ({ onClose }) => {
     const [transactions, setTransactions] = useState([]);
@@ -54,6 +55,8 @@ const EditTransactions = ({ onClose }) => {
         currentPage * itemsPerPage,
         currentPage * itemsPerPage + itemsPerPage
     );
+
+        const [isAddOpen, setIsAddOpen] = useState(false);
 
     return (
         <Dialog open onClose={onClose} fullWidth maxWidth="sm">
@@ -99,10 +102,20 @@ const EditTransactions = ({ onClose }) => {
                 <Button onClick={onClose} color="secondary">
                     Close
                 </Button>
-                <Button variant="contained" color="primary">
+                <Button variant="contained" color="primary" onClick={() => setIsAddOpen(true)}>
                     Add Transaction
                 </Button>
             </DialogActions>
+            {isAddOpen && (
+                <AddTransactionDialog
+                    open={isAddOpen}
+                    onClose={() => setIsAddOpen(false)}
+                    onCreated={(tx) => {
+                        // prepend to transactions for immediate feedback
+                        setTransactions(prev => [tx, ...prev]);
+                    }}
+                />
+            )}
         </Dialog>
     );
 };

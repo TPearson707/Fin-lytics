@@ -1,33 +1,49 @@
 .page-container {
   .budget-content {
     display: grid;
-    grid-template-columns: repeat(12, 1fr);
+    grid-template-columns: 1fr 2fr; // left column (4 cols equivalent) and right column (8 cols equivalent)
     gap: 20px;
-    padding: 20px;
+    padding: 0; // remove extra inner padding so left column can be flush
+  }
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-left: 0; // flush to the left
+
+    > .quick-card,
+    > .myaccounts-card,
+    > .transactions-card,
+    > .visual-card {
+    padding-top: 22px; // small extra top padding so input labels don't touch the card edge
+    }
   }
 
-  .group1 {
-    grid-column: span 6;
-  }
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-left: 15px; 
 
-  .group2 {
-    grid-column: span 6;
-  }
-
-  .group3 {
-    grid-column: span 4;
-
-    > div {
+    .tall-card {
+      flex: 1 1 50%;
       background-color: #ffffff;
       border-radius: 8px;
-      padding: 16px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-      transition: transform 0.2s, box-shadow 0.2s;
+      padding: 12px;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+    }
+  }
 
-      &:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
-      }
+  // header QuickAccess toolbar (when moved into header)
+  > .MuiBox-root, .page-container-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .quick-card-content, .header-quick-access {
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
   }
 
@@ -37,7 +53,7 @@
     margin-bottom: 12px;
     color: #333;
     padding: 15px;
-    padding-bottom: 0;
+    padding-bottom: 5
   }
 
   .card-content {
@@ -107,5 +123,14 @@
         }
       }
     }
+  }
+}
+
+/* Force a little extra space at the top of the projections card so labels aren't clipped. */
+.projections-card {
+  padding-top: 22px !important; /* override inline sx padding */
+
+  .card-body {
+    margin-top: 6px; /* nudge body contents down a bit */
   }
 }

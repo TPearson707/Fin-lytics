@@ -1,5 +1,5 @@
 import React from 'react';
-import './portfolio.scss';
+import '../../styles/pages/dashboard/portfolio-page/portfolio.scss';
 
 const Portfolio = () => {
   const holdings = [

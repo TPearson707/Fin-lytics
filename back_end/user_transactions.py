@@ -24,7 +24,9 @@ def get_db():
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_user_transactions(
     user: Annotated[dict, Depends(get_current_user)],
-    db: Annotated[Session, Depends(get_db)]
+    db: Annotated[Session, Depends(get_db)],
+    start_date: str | None = None,
+    end_date: str | None = None,
 ):
     """
     Fetch the user's transactions from Plaid and the database.
@@ -41,14 +43,21 @@ async def get_user_transactions(
         decrypted_access_token = decrypt_token(db_user.plaid_access_token)
         print("Decrypted access token:", decrypted_access_token)  # Debug
 
-        # Fetch transactions from Plaid
-        end_date = datetime.now().date()
-        start_date = (datetime.now() - timedelta(days=30)).date()
+        # Fetch transactions from Plaid (respect optional query params)
+        if end_date:
+            end_dt = datetime.fromisoformat(end_date).date()
+        else:
+            end_dt = datetime.now().date()
+
+        if start_date:
+            start_dt = datetime.fromisoformat(start_date).date()
+        else:
+            start_dt = (datetime.now() - timedelta(days=30)).date()
 
         request = TransactionsGetRequest(
             access_token=decrypted_access_token,
-            start_date=start_date,
-            end_date=end_date,
+            start_date=start_dt,
+            end_date=end_dt,
             client_id=PLAID_CLIENT_ID,
             secret=PLAID_SECRET
         )
@@ -69,13 +78,20 @@ async def get_user_transactions(
         ]
 
         # Fetch transactions from the database
-        db_transactions = db.query(Plaid_Transactions).filter(
+        # Optionally filter DB transactions by date range
+        q = db.query(Plaid_Transactions).filter(
             Plaid_Transactions.account_id.in_(
                 db.query(Plaid_Bank_Account.account_id).filter(
                     Plaid_Bank_Account.user_id == user["id"]
                 )
             )
-        ).all()
+        )
+        if start_date:
+            q = q.filter(Plaid_Transactions.date >= start_dt)
+        if end_date:
+            q = q.filter(Plaid_Transactions.date <= end_dt)
+
+        db_transactions = q.all()
 
         db_transactions_data = [
             {
@@ -95,3 +111,46 @@ async def get_user_transactions(
     except Exception as e:
         print("Error in /user_transactions/ endpoint:", str(e))  # Debug
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+async def create_transaction(
+    payload: dict,
+    user: Annotated[dict, Depends(get_current_user)],
+    db: Annotated[Session, Depends(get_db)],
+):
+    """
+    Create a manual transaction in the Plaid_Transactions table for the user's account.
+    Expected payload: { transaction_id, account_id, amount, currency, category, merchant_name, date }
+    """
+    try:
+        db_user = db.query(Users).filter(Users.id == user["id"]).first()
+        if not db_user:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        # Minimal validation
+        required = ["transaction_id", "account_id", "amount", "date"]
+        for r in required:
+            if r not in payload:
+                raise HTTPException(status_code=400, detail=f"Missing field: {r}")
+
+        # Create Plaid_Transactions row
+        new = Plaid_Transactions(
+            transaction_id=payload["transaction_id"],
+            account_id=payload["account_id"],
+            amount=payload["amount"],
+            currency=payload.get("currency"),
+            category=payload.get("category"),
+            merchant_name=payload.get("merchant_name"),
+            date=datetime.fromisoformat(payload["date"]).date()
+        )
+        db.add(new)
+        db.commit()
+        db.refresh(new)
+
+        return {"status": "created", "transaction_id": new.transaction_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Error creating transaction:", str(e))
+        raise HTTPException(status_code=500, detail="Error creating transaction")
