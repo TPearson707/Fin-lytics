@@ -1,7 +1,8 @@
 fastapi
 uvicorn
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt==4.1.2
+passlib==1.7.4
 python-multipart
 sqlalchemy
 plaid-python
