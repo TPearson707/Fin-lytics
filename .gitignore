@@ -24,7 +24,11 @@ dist-ssr
 *.sln
 *.sw?
 
-# Virtual environment
+# Virtual environment files
+venv/
+.venv/
+back_end/.venv/
+back_end/venv/
 back_end/bin/
 back_end/lib/
 back_end/lib64/
