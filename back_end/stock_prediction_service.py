@@ -12,6 +12,7 @@ from database import SessionLocal
 from models import Stock_Prediction
 import threading
 import time
+import random
 
 load_dotenv()
 
@@ -35,7 +36,7 @@ class StockPredictionService:
                 logger.error(f"Model path not found: {self.model_path}")
                 return False
                 
-            self.predictor = TimeSeriesPredictor.load(self.model_path)
+            self.predictor = TimeSeriesPredictor.load(self.model_path, require_version_match=False)
             logger.info("Chronos model loaded successfully")
             return True
         except Exception as e:
@@ -188,6 +189,66 @@ class StockPredictionService:
         except Exception as e:
             logger.error(f"Prediction failed for {ticker}: {e}")
             return None
+
+    def make_interval_predictions(self, ticker: str) -> Optional[List[Dict]]:
+        """Generate multi-interval predictions for a given ticker."""
+        try:
+            if not self.predictor:
+                logger.error("Model not loaded")
+                return None
+
+            # Fetch historical stock data
+            df = self.fetch_stock_data(ticker)
+            if df is None or len(df) < 365:
+                logger.warning(f"Insufficient data for {ticker}")
+                return None
+
+            # Convert to TimeSeriesDataFrame for AutoGluon
+            ts_data = TimeSeriesDataFrame.from_data_frame(
+                df, id_column="item_id", timestamp_column="timestamp"
+            )
+
+            # Run Chronos prediction
+            # Run Chronos prediction
+            predictions = self.predictor.predict(ts_data)
+
+            # Convert predictions safely regardless of AG version
+            if hasattr(predictions, "to_pandas"):
+                pred_df = predictions.to_pandas().reset_index()
+            else:
+                pred_df = predictions.reset_index()
+
+            ticker_preds = pred_df[pred_df["item_id"] == ticker]
+            if ticker_preds.empty:
+                logger.warning(f"No predictions for {ticker}")
+                return None
+
+            # Get last known close
+            last_close = float(df["target"].iloc[-1])
+
+            # Define intervals (minutes)
+            intervals = [5, 15, 30, 60, 1440]  # up to 1 day
+            rows = ticker_preds.head(len(intervals))
+
+            results = []
+            for i, row in enumerate(rows.itertuples()):
+                predicted_price = float(getattr(row, "mean", getattr(row, "_0_5", 0)))
+                change = ((predicted_price - last_close) / last_close) * 100
+
+                results.append({
+                    "ticker": ticker,
+                    "interval": f"{intervals[i]}m" if intervals[i] < 1440 else "1d",
+                    "predicted_price": predicted_price,
+                    "change": change
+                })
+
+            logger.info(f"Generated {len(results)} interval predictions for {ticker}")
+            return results
+
+        except Exception as e:
+            logger.error(f"Prediction failed for {ticker}: {e}")
+            return None
+
     
     def save_prediction(self, prediction_data: Dict):
         """Save prediction to database"""
@@ -298,6 +359,36 @@ class StockPredictionService:
         except Exception as e:
             logger.error(f"Failed to get predictions: {e}")
             return []
+
+    def get_daily_prediction_tickers(self) -> List[str]:
+        """
+        Simplified: only returns one ticker at a time (random pick from blue-chips + movers).
+        Keeps predictions lightweight and prevents multi-list output issues.
+        """
+        core_tickers = ["AAPL", "MSFT", "NVDA", "AMZN", "META", "GOOGL", "TSLA", "BRK.B"]
+        mover_type = random.choice(["gainers", "losers"])
+
+        try:
+            url = f"{self.fmp_base_url}/stock_market/{mover_type}"
+            params = {"apikey": self.fmp_api_key}
+            response = requests.get(url, params=params)
+            response.raise_for_status()
+            data = response.json()
+
+            trending = [
+                d["ticker"] for d in data
+                if d.get("ticker") 
+                and not any(x in d["ticker"].upper() for x in ["^", "-", "ETF", "INDEX"])
+            ]
+        except Exception as e:
+            logger.warning(f"Failed to fetch {mover_type}: {e}")
+            trending = []
+
+        tickers = list(dict.fromkeys(core_tickers + trending))
+        chosen = [random.choice(tickers)]  # pick one ticker only
+        logger.info(f"Selected ticker for Chronos run: {chosen}")
+        return chosen
+
 
 # Global instance
 prediction_service = StockPredictionService()

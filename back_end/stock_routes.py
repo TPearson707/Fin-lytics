@@ -224,6 +224,35 @@ async def generate_immediate_prediction(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate predictions: {str(e)}")
 
+@router.post("/predictions/generate-intervals")
+async def generate_interval_predictions(
+    request: PredictionRequest,
+    user: dict = Depends(get_current_user)
+):
+    """Generate multi-interval predictions (for Stock Insights)."""
+    try:
+        results = []
+        for ticker in request.tickers:
+            preds = prediction_service.make_interval_predictions(ticker)
+            if preds:
+                results.extend(preds)
+            else:
+                results.append({
+                    "ticker": ticker,
+                    "interval": "N/A",
+                    "predicted_price": None,
+                    "change": None,
+                    "error": "Failed to generate prediction"
+                })
+        if not results:
+            raise HTTPException(status_code=404, detail="No predictions generated")
+        return {"predictions": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate interval predictions: {str(e)}")
+
+
+
+
 @router.get("/predictions/history/{ticker}")
 async def get_prediction_history(
     ticker: str,

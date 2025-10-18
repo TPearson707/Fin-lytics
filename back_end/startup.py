@@ -13,8 +13,12 @@ def initialize_prediction_service():
         if prediction_service.load_model():
             logger.info("Prediction service initialized successfully")
             # Optionally start predictions for default tickers
-            # prediction_service.start_predictions(['AAPL'])
-            prediction_service.start_predictions("NVDA", "MSFT", "AAPL", "AMZN", "GOOGL", "META", "BRK.B", "TSLA", "AVGO", "PLTR")
+            tickers = prediction_service.get_daily_prediction_tickers()
+            if tickers:
+                prediction_service.start_predictions(tickers)
+                logger.info(f"Started prediction service for tickers: {tickers}")
+            else:
+                logger.warning("No tickers available to start prediction service")
         else:
             logger.error("Failed to initialize prediction service - model could not be loaded")
     except Exception as e:
