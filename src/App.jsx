@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 import Intropage from "./pages/intropage/Intropage";
-import Dashboard from "./pages/dashboard/Dashboard";
+import Dashboard from "./pages/Dashboard";
 import NoPage from "./pages/NoPage";
 import About from "./pages/about/About";
 
