@@ -17,3 +17,4 @@ matplotlib
 numpy
 polygon-api-client
 python-dateutil
+autogluon

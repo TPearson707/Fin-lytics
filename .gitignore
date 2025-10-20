@@ -49,3 +49,4 @@ back_end/lib/python3.12/site-packages/*
 
 #.env keys
 .env
+AI_model

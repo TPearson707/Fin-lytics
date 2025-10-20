@@ -115,6 +115,11 @@ class User_Categories(Base):
         back_populates="category",
         cascade="all, delete-orphan"
     )
+    user_transaction_links = relationship(
+     "User_Transaction_Category_Link",
+     back_populates="category",
+     cascade="all, delete-orphan"
+    )
     __table_args__ = (
         UniqueConstraint('user_id', 'name', name='_user_name_uc'),
     )
@@ -202,4 +207,68 @@ class User_Balance(Base):
     balance_date = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("Users", back_populates="balances")
+
+
+class User_Transactions(Base):
+    def to_dict(self):
+        return {
+            "transaction_id": self.transaction_id,
+            "user_id": self.user_id,
+            "date": self.date.isoformat() if self.date else None,
+            "amount": self.amount,
+            "description": self.description,
+            "category_id": self.category_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+    __tablename__ = "User_Transactions"
+
+    transaction_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
+    date = Column(Date, nullable=False)
+    amount = Column(Float, nullable=False)
+    description = Column(String(255), nullable=True)
+    category_id = Column(Integer, ForeignKey("User_Categories.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_transaction_links = relationship(
+        "User_Transaction_Category_Link",
+        back_populates="user_transaction",
+        cascade="all, delete-orphan"
+    )
+
+class User_Transaction_Category_Link(Base):
+    __tablename__ = "User_Transaction_Category_Link"
+
+    id = Column(Integer, primary_key=True)
+    transaction_id = Column(Integer, ForeignKey("User_Transactions.transaction_id", ondelete="CASCADE"), nullable=False)
+    category_id = Column(Integer, ForeignKey("User_Categories.id", ondelete="CASCADE"), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    user_transaction = relationship("User_Transactions", back_populates="user_transaction_links")
+    category = relationship("User_Categories", back_populates="user_transaction_links")
+    __table_args__ = (
+        UniqueConstraint('transaction_id', name='_user_transaction_id_uc'),
+    )
+
+    def to_dict(self):
+        return {
+            "transaction_id": self.transaction_id,
+            "user_id": self.user_id,
+            "date": self.date.isoformat(),
+            "amount": self.amount,
+            "description": self.description,
+            "category_id": self.category_id,
+            "created_at": self.created_at.isoformat(),
+        }
+
+class Stock_Prediction(Base):
+    __tablename__ = "Stock_Predictions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticker = Column(String(10), nullable=False, index=True)
+    predicted_price = Column(Float, nullable=False)
+    confidence_low = Column(Float, nullable=True)
+    confidence_high = Column(Float, nullable=True)
+    prediction_time = Column(DateTime, default=datetime.utcnow, index=True)
+    horizon_minutes = Column(Integer, default=5)
+    model_version = Column(String(50), default="ChronosFineTuned")
+    created_at = Column(DateTime, default=datetime.utcnow)
 

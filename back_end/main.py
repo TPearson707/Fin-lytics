@@ -16,6 +16,8 @@ import user_balances
 import user_transactions
 import entered_transactions
 import balance_routes
+from startup import initialize_prediction_service, cleanup_prediction_service
+import atexit
 
 app = FastAPI()
 
@@ -49,7 +51,11 @@ app.include_router(balance_routes.router)
 # Create MySQL tables (make sure this is called at least once)
 models.Base.metadata.create_all(bind=engine)
 
-#models.Base.metadata.create_all(bind=engine)
+# Initialize prediction service
+initialize_prediction_service()
+
+# Register cleanup function
+atexit.register(cleanup_prediction_service)
 
 def get_db():
     db = SessionLocal()

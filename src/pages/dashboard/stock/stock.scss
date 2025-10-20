@@ -1,0 +1,122 @@
+.stock-page {
+  width: 80%;
+  margin: 0 auto;
+  margin-top: 2rem;
+  overflow-x: auto;
+
+  &__title {
+    font-size: 2rem; // same as .section-title in portfolio
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    color: #000000;
+    text-align: center;
+  }
+
+  /* ===== NEW: Search Bar Styling ===== */
+  &__search-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+  }
+
+  &__search {
+    width: 50%;
+    max-width: 500px;
+    padding: 0.6rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #7ea5de;
+    border-radius: 8px; // matches your button + table
+    outline: none;
+    background-color: #f8fbff; // subtle off-white/blue tint
+    color: #1a1a1a;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease-in-out;
+
+    &::placeholder {
+      color: #7ea5de; // light hint text, matches your border blue
+      opacity: 0.9;
+    }
+
+    &:focus {
+      border-color: #5c8fd1; // slightly darker focus border
+      background-color: #ffffff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      transform: translateY(-1px);
+    }
+  }
+
+  &__button {
+    margin-bottom: 1rem;
+    padding: 0.6rem 1.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: 1px solid #7ea5de;
+    border-radius: 8px;
+    background-color: #ebf4ff;
+    color: #1a1a1a;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+
+    &:hover {
+      background-color: #dbeafe;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    &:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+    margin-top: 1rem;
+    border-radius: 8px;
+    overflow: hidden;
+
+    thead {
+      background-color: #ebf4ff; // matches holdings-section header
+    }
+
+    th,
+    td {
+      border: 1px solid #7ea5de; // consistent blue border
+      padding: 0.75rem;
+      text-align: center;
+    }
+
+    tbody {
+      tr {
+        transition: background-color 0.2s ease-in-out;
+
+        &:hover {
+          background-color: #f6fafd; // same as .total-row background
+        }
+      }
+    }
+  }
+
+  .stock-page__table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover {
+      background-color: #f0f6ff; // subtle highlight
+    }
+  }
+
+  // Optional utility classes
+  &__positive {
+    color: #2e7d32; // matches .positive in portfolio
+    font-weight: 600;
+  }
+
+  &__negative {
+    color: #c62828;
+    font-weight: 600;
+  }
+}

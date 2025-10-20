@@ -1,0 +1,105 @@
+.stock-details {
+  width: 80%;
+  margin: 0 auto;
+  margin-top: 2rem;
+
+  &__top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+  }
+
+  &__back {
+    font-size: 1rem;
+    font-weight: 600;
+    border: 1px solid #7ea5de;
+    border-radius: 8px;
+    background-color: #ebf4ff;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+      background-color: #dbeafe;
+      transform: translateY(-1px);
+    }
+  }
+
+  &__search {
+    width: 250px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #7ea5de;
+    border-radius: 8px;
+    font-size: 1rem;
+    outline: none;
+    background-color: #f8fbff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+
+    &:focus {
+      border-color: #4c7edb;
+      box-shadow: 0 0 0 3px rgba(124, 172, 255, 0.2);
+    }
+  }
+
+  &__title {
+    text-align: center;
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  &__content {
+    display: flex;
+    justify-content: space-between;
+    gap: 2rem;
+  }
+
+  &__chart {
+    flex: 2;
+    background-color: #f9fbff;
+    border: 1px solid #7ea5de;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  }
+
+  &__predictions {
+    flex: 1;
+    background-color: #f9fbff;
+    border: 1px solid #7ea5de;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+
+    h3 {
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+  }
+
+  &__table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th, td {
+      border: 1px solid #7ea5de;
+      text-align: center;
+      padding: 0.5rem;
+    }
+
+    thead {
+      background-color: #ebf4ff;
+    }
+  }
+
+  &__positive {
+    color: #2e7d32;
+    font-weight: 600;
+  }
+
+  &__negative {
+    color: #c62828;
+    font-weight: 600;
+  }
+}

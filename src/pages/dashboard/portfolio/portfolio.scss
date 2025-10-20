@@ -18,7 +18,9 @@
 }
 
 .card {
-  background-color: #d2e6d5;
+  // background-color: #d2e6d5;
+  background-color: #f0f4f0; 
+  border: 1px solid #c4d2c4;  
   border-radius: 12px;
   padding: 1.5rem;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.06);
@@ -95,6 +97,8 @@
 }
 
 .holdings-section {
+  width: 80%;
+  margin: 0 auto;
   margin-top: 2rem;
   overflow-x: auto;
 }

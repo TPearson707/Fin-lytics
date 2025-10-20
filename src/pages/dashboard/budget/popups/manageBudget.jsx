@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import "../../../../components/popups/modal.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPencil } from "@fortawesome/free-solid-svg-icons";
-import "./manbud.scss";
+import "./manBud.scss";
 import api from "../../../../api";
 
 const ManageBudgets = ({ onClose }) => {
