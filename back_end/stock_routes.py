@@ -7,6 +7,7 @@ from pydantic import BaseModel
 import requests
 from dotenv import load_dotenv
 from stock_prediction_service import prediction_service
+from eod_updater import eod_updater
 from typing import List, Optional
 from datetime import datetime, timedelta
 import os
@@ -260,5 +261,68 @@ async def get_prediction_history(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get prediction history: {str(e)}")
 
+
+
+# ---------------- EOD data updater endpoints ----------------
+
+class EODUpdateRequest(BaseModel):
+    tickers: List[str]
+
+@router.post("/eod/update")
+async def trigger_eod_update(
+    request: EODUpdateRequest,
+    user: dict = Depends(get_current_user)
+):
+    try:
+        eod_updater.run_once(request.tickers)
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to run EOD update: {str(e)}")
+
+@router.post("/eod/start")
+async def start_eod_service(
+    request: EODUpdateRequest,
+    user: dict = Depends(get_current_user)
+):
+    try:
+        eod_updater.start(request.tickers)
+        return {"status": "started", "tickers": request.tickers}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start EOD service: {str(e)}")
+
+@router.post("/eod/stop")
+async def stop_eod_service(
+    user: dict = Depends(get_current_user)
+):
+    try:
+        eod_updater.stop()
+        return {"status": "stopped"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop EOD service: {str(e)}")
+
+@router.get("/eod/status")
+async def eod_status(
+    user: dict = Depends(get_current_user)
+):
+    try:
+        return eod_updater.status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve EOD status: {str(e)}")
+
+@router.post("/eod/update-all")
+async def update_all_stocks(
+    user: dict = Depends(get_current_user)
+):
+    """Update all stocks from the ticker list at once"""
+    try:
+        eod_updater.update_all_stocks()
+        return {
+            "status": "ok", 
+            "message": f"Update initiated for all {len(eod_updater.tickers)} stocks",
+            "ticker_count": len(eod_updater.tickers),
+            "note": "This will update both 5-minute and 15-minute data for all stocks in the ticker list"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update all stocks: {str(e)}")
 
 
