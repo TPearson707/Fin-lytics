@@ -5,6 +5,8 @@ import axios from "axios";
 
 import Intropage from "./pages/intropage/Intropage";
 import Dashboard from "./pages/dashboard/Dashboard";
+import Stock from "./pages/dashboard/stock/stock";
+import StockInsights from "./pages/dashboard/stock/StockInsights";
 import NoPage from "./pages/NoPage";
 import About from "./pages/about/About";
 import IntroNavbar from "./components/navbar/IntroNavbar";
@@ -78,6 +80,7 @@ const App = () => {
       <BrowserRouter>
         {isAuthenticated ? (
           <Routes>
+
             <Route
               path="/*"
               element={
