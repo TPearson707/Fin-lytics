@@ -28,10 +28,8 @@ def get_total_expenses_per_category(user_id: int, db: Session):
 
     for category in categories:
         try:
-            # get all transactions for this user's accounts that are linked to this category
-            # join Plaid_Transactions -> Plaid_Bank_Account -> User, and filter by category
-            # only select the columns we need to get rid of frequency column issues
-            transactions = db.query(
+            # Get Plaid transactions for this category
+            plaid_transactions = db.query(
                 Plaid_Transactions.amount
             ).join(
                 Plaid_Bank_Account, 
@@ -44,8 +42,23 @@ def get_total_expenses_per_category(user_id: int, db: Session):
                 Transaction_Category_Link.category_id == category["id"]
             ).all()
             
-            # calculate total expenses (use absolute value for expenses)
-            total = sum(abs(transaction.amount) for transaction in transactions if transaction.amount)
+            # Get User transactions for this category
+            from models import User_Transactions, User_Transaction_Category_Link
+            user_transactions = db.query(
+                User_Transactions.amount
+            ).join(
+                User_Transaction_Category_Link,
+                User_Transactions.transaction_id == User_Transaction_Category_Link.transaction_id
+            ).filter(
+                User_Transactions.user_id == user_id,
+                User_Transaction_Category_Link.category_id == category["id"]
+            ).all()
+            
+            # Combine and calculate total expenses (use absolute value for expenses)
+            plaid_total = sum(abs(transaction.amount) for transaction in plaid_transactions if transaction.amount)
+            user_total = sum(abs(transaction.amount) for transaction in user_transactions if transaction.amount)
+            total = plaid_total + user_total
+            
             category_expenses[category["name"]] = total
         except Exception as e:
             print(f"Error processing category {category['name']}: {str(e)}")

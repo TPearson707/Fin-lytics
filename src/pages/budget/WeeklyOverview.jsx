@@ -67,6 +67,7 @@ export default function FinancialCalendar() {
       const all = [ 
         ...(resp.data.db_transactions || []), 
         ...(resp.data.plaid_transactions || []),
+        ...(resp.data.user_transactions || []),
         ...(resp.data.recurring_transactions || [])
       ];
       const grouped = {};
@@ -125,6 +126,7 @@ export default function FinancialCalendar() {
         const all = [ 
           ...(resp.data.db_transactions || []), 
           ...(resp.data.plaid_transactions || []),
+          ...(resp.data.user_transactions || []),
           ...(resp.data.recurring_transactions || [])
         ];
         // treat upcoming as those with date >= today

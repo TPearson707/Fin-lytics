@@ -126,7 +126,9 @@ async def get_user_transactions(
 
         transactions = []
         # handling: only attempt Plaid call if user has linked a Plaid access token
-        if db_user and db_user.plaid_access_token:
+        DISABLE_PLAID_SANDBOX = False  # Set to True to disable Plaid sandbox transactions
+        
+        if db_user and db_user.plaid_access_token and not DISABLE_PLAID_SANDBOX:
             try:
                 decrypted_access_token = decrypt_token(db_user.plaid_access_token)
                 print(f"[PLAID] Decrypted access token available")  # Debug
@@ -141,23 +143,43 @@ async def get_user_transactions(
                 response = client.transactions_get(request).to_dict()
                 print(f"[PLAID] Retrieved {len(response.get('transactions', []))} transactions")  # Debug
 
-                transactions = [
-                    {
-                        "transaction_id": t["transaction_id"],
-                        "account_id": t["account_id"],
-                        "amount": t["amount"],
-                        "currency": t.get("iso_currency_code"),
-                        "category": ", ".join(t["category"]) if t.get("category") else None,
-                        "merchant_name": t.get("merchant_name"),
-                        "date": t["date"]
-                    }
-                    for t in response.get("transactions", [])
-                ]
+                # Filter transactions by date range (Plaid sandbox sometimes ignores date filters)
+                transactions = []
+                for t in response.get("transactions", []):
+                    try:
+                        tx_date = datetime.fromisoformat(str(t["date"])).date() if isinstance(t["date"], str) else t["date"]
+                        if start_dt <= tx_date <= end_dt:
+                            transactions.append({
+                                "transaction_id": t["transaction_id"],
+                                "account_id": t["account_id"],
+                                "amount": t["amount"],
+                                "currency": t.get("iso_currency_code"),
+                                "category": ", ".join(t["category"]) if t.get("category") else None,
+                                "merchant_name": t.get("merchant_name"),
+                                "date": t["date"]
+                            })
+                    except Exception as date_err:
+                        print(f"[PLAID] Error processing transaction date {t.get('date')}: {date_err}")
+                        # Include transaction anyway if date parsing fails
+                        transactions.append({
+                            "transaction_id": t["transaction_id"],
+                            "account_id": t["account_id"],
+                            "amount": t["amount"],
+                            "currency": t.get("iso_currency_code"),
+                            "category": ", ".join(t["category"]) if t.get("category") else None,
+                            "merchant_name": t.get("merchant_name"),
+                            "date": t["date"]
+                        })
+                
+                print(f"[PLAID] Filtered to {len(transactions)} transactions within date range")
             except Exception as plaid_err:
                 # Graceful error handling: Log plaid error but continue to return DB transactions
                 print(f"[PLAID] Fetch error (continuing with DB transactions): {str(plaid_err)}")
         else:
-            print("[PLAID] No access token found, using database transactions only")
+            if DISABLE_PLAID_SANDBOX:
+                print("[PLAID] Sandbox transactions disabled for development")
+            else:
+                print("[PLAID] No access token found, using database transactions only")
 
         # Fetch transactions from the database with advanced error handling
         # This maintains schema flexibility for database migrations
@@ -245,6 +267,40 @@ async def get_user_transactions(
 
         print(f"[DATABASE] Processed {len(db_transactions_data)} transaction records")
 
+        # Fetch User_Transactions (user-entered transactions)
+        user_transactions = []
+        try:
+            from models import User_Transactions
+            user_txns = db.query(User_Transactions).filter(
+                User_Transactions.user_id == user["id"]
+            )
+            if start_date:
+                user_txns = user_txns.filter(User_Transactions.date >= start_dt)
+            if end_date:
+                user_txns = user_txns.filter(User_Transactions.date <= end_dt)
+            
+            user_txns = user_txns.all()
+            print(f"[USER_TRANSACTIONS] Retrieved {len(user_txns)} user transactions")
+            
+            user_transactions = [
+                {
+                    "transaction_id": f"user-{t.transaction_id}",  # Prefix to distinguish from Plaid
+                    "account_id": "manual",
+                    "amount": t.amount,
+                    "currency": "USD",
+                    "category": None,  # Will be populated from category link if available
+                    "merchant_name": t.description,
+                    "date": t.date.isoformat() if t.date else None,
+                    "is_user_transaction": True
+                }
+                for t in user_txns
+            ]
+        except Exception as user_tx_err:
+            print(f"[USER_TRANSACTIONS] Error fetching user transactions: {user_tx_err}")
+            user_transactions = []
+
+        print(f"[DATABASE] Processed {len(db_transactions_data)} transaction records")
+
         # Generate future recurring transactions (advanced feature)
         # This enables budget projections and financial planning
         recurring_transactions = []
@@ -269,10 +325,12 @@ async def get_user_transactions(
         response_data = {
             "plaid_transactions": transactions, 
             "db_transactions": db_transactions_data,
+            "user_transactions": user_transactions,  # Add user-entered transactions
             "recurring_transactions": recurring_transactions,
             "summary": {
                 "plaid_count": len(transactions),
                 "db_count": len(db_transactions_data),
+                "user_count": len(user_transactions),
                 "recurring_count": len(recurring_transactions),
                 "date_range": {"start": start_dt.isoformat(), "end": end_dt.isoformat()}
             }
@@ -295,79 +353,88 @@ async def create_transaction(
     db: Annotated[Session, Depends(get_db)],
 ):
     """
-    Create a manual transaction in the Plaid_Transactions table for the user's account.
+    Create a manual transaction in the User_Transactions table for the user.
     
-    DESIGN CHOICE: This POST endpoint enables full manipulation of the Plaid_Transactions table,
-    allowing users to add manual transactions, recurring transactions, and budget projections.
-    This extends beyond basic budgeter functionality to provide comprehensive financial control.
-    
-    Expected payload: { transaction_id, account_id, amount, currency, category, merchant_name, date, frequency }
+    Expected payload: { amount, category, merchant_name, date }
     """
     try:
-        print(f"[CREATE_TRANSACTION] Creating transaction for user {user['id']}")
+        print(f"[CREATE_TRANSACTION] Creating user transaction for user {user['id']}")
         db_user = db.query(Users).filter(Users.id == user["id"]).first()
         if not db_user:
             raise HTTPException(status_code=404, detail="User not found")
 
-        # Minimal validation
-        required = ["transaction_id", "account_id", "amount", "date"]
+        # Minimal validation for User_Transactions
+        required = ["amount", "date"]
         for r in required:
             if r not in payload:
                 raise HTTPException(status_code=400, detail=f"Missing field: {r}")
 
         print(f"[CREATE_TRANSACTION] Payload validated: {list(payload.keys())}")
 
-        # Enhanced account handling: Support manual entries for budget manipulation
-        acct_id = payload["account_id"]
-
-        if acct_id == 'manual' or not db.query(Plaid_Bank_Account).filter(Plaid_Bank_Account.account_id == acct_id, Plaid_Bank_Account.user_id == db_user.id).first():
-            # find existing manual account for user
-            manual = db.query(Plaid_Bank_Account).filter(Plaid_Bank_Account.user_id == db_user.id, Plaid_Bank_Account.name == 'Manual Entries').first()
-            if not manual:
-                # create a synthetic manual account row
-                import uuid
-                manual_account_id = f"manual-{db_user.id}-{uuid.uuid4().hex[:8]}"
-                manual = Plaid_Bank_Account(
-                    user_id=db_user.id,
-                    account_id=manual_account_id,
-                    name='Manual Entries',
-                    type='manual',
-                    subtype='manual',
-                    current_balance=0.0,
-                    available_balance=0.0,
-                    currency='USD'
-                )
-                db.add(manual)
-                db.commit()
-                db.refresh(manual)
-                print(f"[CREATE_TRANSACTION] Created manual account: {manual_account_id}")
-            acct_id = manual.account_id
-
-        # create Plaid_Transactions row with advanced features
-        transaction_data = {
-            "transaction_id": payload["transaction_id"],
-            "account_id": acct_id,
-            "amount": payload["amount"],
-            "currency": payload.get("currency"),
-            "category": payload.get("category"),
-            "merchant_name": payload.get("merchant_name"),
-            "date": datetime.fromisoformat(payload["date"]).date()
-        }
-        
-        # support recurring transactions for budget projections
-        if payload.get("frequency") and hasattr(Plaid_Transactions, 'frequency'):
-            transaction_data["frequency"] = payload.get("frequency")
-            print(f"[CREATE_TRANSACTION] Added recurring frequency: {payload.get('frequency')}")
+        # Handle category creation and get category_id
+        category_id = None
+        if payload.get("category"):
+            category_name = payload["category"]
+            print(f"[CREATE_TRANSACTION] Processing category: {category_name}")
             
-        new = Plaid_Transactions(**transaction_data)
-        db.add(new)
-        db.commit()
-        db.refresh(new)
+            # Check if category exists for this user
+            from models import User_Categories, User_Transaction_Category_Link
+            user_category = db.query(User_Categories).filter(
+                User_Categories.user_id == user["id"],
+                User_Categories.name == category_name
+            ).first()
+            
+            # Create category if it doesn't exist
+            if not user_category:
+                print(f"[CREATE_TRANSACTION] Creating new category: {category_name}")
+                user_category = User_Categories(
+                    user_id=user["id"],
+                    name=category_name,
+                    color="#4CAF50",  # Default green color
+                    weekly_limit=None
+                )
+                db.add(user_category)
+                db.commit()
+                db.refresh(user_category)
+                print(f"[CREATE_TRANSACTION] Created category with ID: {user_category.id}")
+            
+            category_id = user_category.id
 
-        print(f"[CREATE_TRANSACTION] Successfully created transaction: {new.transaction_id}")
-        return {"status": "created", "transaction_id": new.transaction_id}
+        # Create User_Transactions record
+        from models import User_Transactions
+        new_transaction = User_Transactions(
+            user_id=user["id"],
+            date=datetime.fromisoformat(payload["date"]).date(),
+            amount=payload["amount"],
+            description=payload.get("merchant_name", "Manual Transaction"),
+            category_id=category_id
+        )
+        
+        db.add(new_transaction)
+        db.commit()
+        db.refresh(new_transaction)
+        print(f"[CREATE_TRANSACTION] Created User_Transaction with ID: {new_transaction.transaction_id}")
+
+        # Create User_Transaction_Category_Link
+        if category_id:
+            try:
+                transaction_link = User_Transaction_Category_Link(
+                    transaction_id=new_transaction.transaction_id,
+                    category_id=category_id
+                )
+                db.add(transaction_link)
+                db.commit()
+                print(f"[CREATE_TRANSACTION] Created user transaction-category link")
+            except Exception as link_err:
+                print(f"[CREATE_TRANSACTION] Error creating user transaction-category link: {link_err}")
+                # Continue anyway, the transaction was created successfully
+
+        print(f"[CREATE_TRANSACTION] Successfully created user transaction: {new_transaction.transaction_id}")
+        return {"status": "created", "transaction_id": new_transaction.transaction_id}
     except HTTPException:
         raise
     except Exception as e:
-        print(f"[CREATE_TRANSACTION] Error creating transaction: {str(e)}")
+        print(f"[CREATE_TRANSACTION] Error creating user transaction: {str(e)}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail="Error creating transaction")

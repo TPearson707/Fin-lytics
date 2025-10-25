@@ -31,7 +31,15 @@ const TransactionCard = () => {
                 const thirtyDaysAgo = new Date();
                 thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-                const recentTransactions = response.data.db_transactions
+                // Combine all transaction sources
+                const allTransactions = [
+                    ...(response.data.db_transactions || []),
+                    ...(response.data.plaid_transactions || []),
+                    ...(response.data.user_transactions || []),
+                    ...(response.data.recurring_transactions || [])
+                ];
+
+                const recentTransactions = allTransactions
                     .filter(tx => new Date(tx.date) >= thirtyDaysAgo)
                     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -72,30 +80,51 @@ const TransactionCard = () => {
             )}
 
             {!loading && !error && (
-                <List>
-                    {transactions.length === 0 ? (
-                        <ListItem>
-                            <ListItemText primary="No transactions in the past 30 days" />
-                        </ListItem>
-                    ) : (
-                        transactions.map((tx) => (
-                            <React.Fragment key={tx.transaction_id}>
-                                <ListItem alignItems="center">
-                                    <ListItemText
-                                        primary={tx.merchant_name || tx.category || 'Unknown'}
-                                        secondary={new Date(tx.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
-                                    />
-                                    <ListItemSecondaryAction>
-                                        <Typography sx={{ color: tx.amount < 0 ? 'error.main' : 'success.main', fontWeight: 600 }}>
-                                            ${Math.abs(tx.amount).toFixed(2)}
-                                        </Typography>
-                                    </ListItemSecondaryAction>
-                                </ListItem>
-                                <Divider component="li" />
-                            </React.Fragment>
-                        ))
-                    )}
-                </List>
+                <Box sx={{ 
+                    maxHeight: '400px', // Set max height to match budget projections
+                    overflowY: 'auto',  // Add scroll bar when content exceeds max height
+                    border: '1px solid rgba(0, 0, 0, 0.12)', // Optional: add subtle border
+                    borderRadius: 1,
+                    '&::-webkit-scrollbar': {
+                        width: '8px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.1)',
+                        borderRadius: '4px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        borderRadius: '4px',
+                        '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                        },
+                    },
+                }}>
+                    <List sx={{ p: 0 }}>
+                        {transactions.length === 0 ? (
+                            <ListItem>
+                                <ListItemText primary="No transactions in the past 30 days" />
+                            </ListItem>
+                        ) : (
+                            transactions.map((tx) => (
+                                <React.Fragment key={tx.transaction_id}>
+                                    <ListItem alignItems="center">
+                                        <ListItemText
+                                            primary={tx.merchant_name || tx.category || 'Unknown'}
+                                            secondary={new Date(tx.date).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+                                        />
+                                        <ListItemSecondaryAction>
+                                            <Typography sx={{ color: tx.amount < 0 ? 'error.main' : 'success.main', fontWeight: 600 }}>
+                                                ${Math.abs(tx.amount).toFixed(2)}
+                                            </Typography>
+                                        </ListItemSecondaryAction>
+                                    </ListItem>
+                                    <Divider component="li" />
+                                </React.Fragment>
+                            ))
+                        )}
+                    </List>
+                </Box>
             )}
         </Box>
     );
