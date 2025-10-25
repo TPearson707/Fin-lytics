@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Box, Grid, Paper, Typography, Button, IconButton, Tooltip, Stack, List, ListItem, ListItemText, Divider, TextField } from "@mui/material";
+import { Box, Grid, Paper, Typography, Button, IconButton, Tooltip, Stack, List, ListItem, ListItemText, Divider, TextField, Chip, Modal } from "@mui/material";
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import EditIcon from '@mui/icons-material/Edit';
+import CloseIcon from '@mui/icons-material/Close';
 import "../../styles/pages/dashboard/budget-page/budget.scss";
 import axios from "axios";
 import VisualCard from "./cards/visual-data.jsx";
@@ -36,14 +38,12 @@ const QuickAccess = ({ onEditTransactions, onManageBudgets, onEditAccounts }) =>
   );
 }
 
-const MyAccounts = () => {
+const MyAccounts = ({ refreshTrigger = 0 }) => {
   const [balances, setBalances] = useState({
     checking: { balance_amount: 0, previous_balance: 0 },
     savings: { balance_amount: 0, previous_balance: 0 },
     cash: { balance_amount: 0, previous_balance: 0 }
   });
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedBalances, setEditedBalances] = useState({ checking: '', savings: '', cash: '' });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -51,79 +51,39 @@ const MyAccounts = () => {
       try {
         const token = localStorage.getItem("token");
         
-        // Try to get Plaid balances first
-        try {
-          const response = await axios.get("http://localhost:8000/user_balances/", {
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true,
-          });
+        const response = await axios.get("http://localhost:8000/user_balances/", {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        });
 
-          // Handle the user_balances API response structure
-          const { plaid_balances, cash_balance } = response.data;
-          
-          // Group Plaid balances by subtype
-          const checking = plaid_balances.filter(acc => acc.subtype === "checking")
+        const data = response.data;
+        console.log("Unified balance response:", data);
+        
+        if (data.has_plaid && data.plaid_balances.length > 0) {
+          // Handle Plaid users - aggregate balances by type
+          const checking = data.plaid_balances.filter(acc => acc.subtype === "checking")
             .reduce((sum, acc) => sum + (acc.balance || 0), 0);
-          const savings = plaid_balances.filter(acc => acc.subtype === "savings")
+          const savings = data.plaid_balances.filter(acc => acc.subtype === "savings")
             .reduce((sum, acc) => sum + (acc.balance || 0), 0);
 
           const balancesObj = {
             checking: { balance_amount: checking, previous_balance: 0 },
             savings: { balance_amount: savings, previous_balance: 0 },
-            cash: { balance_amount: cash_balance, previous_balance: 0 }
+            cash: { balance_amount: data.cash_balance || 0, previous_balance: 0 }
           };
           
           setBalances(balancesObj);
-          setEditedBalances({
-            checking: checking.toString(),
-            savings: savings.toString(),
-            cash: cash_balance.toString()
-          });
           console.log("Successfully loaded Plaid balances");
-        } catch (plaidError) {
-          // If Plaid fails (400 = not connected, 500 = server error), fall back to manual balances
-          console.log("Plaid not available, falling back to manual balances:", plaidError.response?.status || plaidError.message);
+        } else {
+          // Handle manual users - use manual_balances from response
+          const balancesObj = {
+            checking: { balance_amount: data.manual_balances.checking || 0, previous_balance: 0 },
+            savings: { balance_amount: data.manual_balances.savings || 0, previous_balance: 0 },
+            cash: { balance_amount: data.manual_balances.cash || data.cash_balance || 0, previous_balance: 0 }
+          };
           
-          try {
-            const response = await axios.get("http://localhost:8000/balances/", {
-              headers: { Authorization: `Bearer ${token}` },
-              withCredentials: true,
-            });
-
-            const balancesObj = response.data.reduce((acc, balance) => {
-              acc[balance.balance_name] = {
-                balance_amount: balance.balance_amount,
-                previous_balance: balance.previous_balance
-              };
-              return acc;
-            }, {});
-            
-            // Ensure all three account types exist with default values if not in database
-            const defaultBalances = {
-              checking: balancesObj.checking || { balance_amount: 0, previous_balance: 0 },
-              savings: balancesObj.savings || { balance_amount: 0, previous_balance: 0 },
-              cash: balancesObj.cash || { balance_amount: 0, previous_balance: 0 }
-            };
-            
-            setBalances(defaultBalances);
-            setEditedBalances({
-              checking: defaultBalances.checking.balance_amount.toString(),
-              savings: defaultBalances.savings.balance_amount.toString(),
-              cash: defaultBalances.cash.balance_amount.toString()
-            });
-            console.log("Successfully loaded manual balances:", defaultBalances);
-          } catch (manualError) {
-            console.error("Failed to load manual balances:", manualError);
-            // If both fail, set default values
-            const defaultBalances = {
-              checking: { balance_amount: 0, previous_balance: 0 },
-              savings: { balance_amount: 0, previous_balance: 0 },
-              cash: { balance_amount: 0, previous_balance: 0 }
-            };
-            setBalances(defaultBalances);
-            setEditedBalances({ checking: '0', savings: '0', cash: '0' });
-            console.log("Using default balances:", defaultBalances);
-          }
+          setBalances(balancesObj);
+          console.log("Successfully loaded manual balances:", balancesObj);
         }
       } catch (error) {
         if (error.response && error.response.status === 401) {
@@ -133,55 +93,20 @@ const MyAccounts = () => {
           navigate("/login");
         } else {
           console.error("Error fetching balances:", error);
+          // Set default values on error
+          const defaultBalances = {
+            checking: { balance_amount: 0, previous_balance: 0 },
+            savings: { balance_amount: 0, previous_balance: 0 },
+            cash: { balance_amount: 0, previous_balance: 0 }
+          };
+          setBalances(defaultBalances);
+          console.log("Using default balances due to error");
         }
       }
     };
 
     fetchBalances();
-  }, [navigate]);
-
-  const handleEditClick = () => {
-    setIsEditing(true);
-    setEditedBalances({
-      checking: balances.checking?.balance_amount?.toString() || '0',
-      savings: balances.savings?.balance_amount?.toString() || '0',
-      cash: balances.cash?.balance_amount?.toString() || '0'
-    });
-  };
-
-  const handleSaveBalances = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      const updates = Object.entries(editedBalances).map(([accountType, amount]) => ({
-        balance_name: accountType,
-        new_amount: parseFloat(amount)
-      }));
-
-      for (const update of updates) {
-        await axios.put(
-          "http://localhost:8000/balances/update",
-          update,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-            withCredentials: true,
-          }
-        );
-      }
-
-      const newBalances = { ...balances };
-      for (const update of updates) {
-        if (newBalances[update.balance_name]) {
-          newBalances[update.balance_name].balance_amount = update.new_amount;
-        }
-      }
-      setBalances(newBalances);
-      setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating balances:", error);
-    }
-  };
-
-  const handleCancelEdit = () => setIsEditing(false);
+  }, [navigate, refreshTrigger]);
 
   return (
     <Box className="card-content">
@@ -192,46 +117,164 @@ const MyAccounts = () => {
               <ListItem>
                 <ListItemText
                   primary={accountType.charAt(0).toUpperCase() + accountType.slice(1)}
-                  secondary={isEditing ? null : `$${(data.balance_amount || 0).toFixed(2)}`}
+                  secondary={`$${(data.balance_amount || 0).toFixed(2)}`}
                 />
-                {isEditing && (
-                  <TextField
-                    size="small"
-                    type="number"
-                    value={editedBalances[accountType]}
-                    onChange={(e) => setEditedBalances(prev => ({ ...prev, [accountType]: e.target.value }))}
-                    inputProps={{ step: '0.01' }}
-                    sx={{ width: 120 }}
-                  />
-                )}
               </ListItem>
               <Divider />
             </React.Fragment>
           ))}
         </List>
-
-        <Box sx={{ display: 'flex', gap: 1, mt: 1, justifyContent: 'flex-end' }}>
-          {isEditing ? (
-            <>
-              <Button size="small" variant="contained" onClick={handleSaveBalances}>Save All</Button>
-              <Button size="small" variant="outlined" onClick={handleCancelEdit}>Cancel</Button>
-            </>
-          ) : (
-            <Button size="small" variant="contained" onClick={handleEditClick}>Edit Balances</Button>
-          )}
-        </Box>
       </Box>
     </Box>
   );
 };
 
-const CardCarousel = () => {
+// EditAccountsModal component for unified account editing
+const EditAccountsModal = ({ open, onClose, userPlaidStatus, currentBalances }) => {
+  const [editedBalances, setEditedBalances] = useState({
+    checking: currentBalances.checking.balance_amount.toString(),
+    savings: currentBalances.savings.balance_amount.toString(),
+    cash: currentBalances.cash.balance_amount.toString()
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Only update editable balances
+      const updates = [];
+      
+      if (userPlaidStatus.balancesEditable.checking) {
+        updates.push({ balance_name: 'checking', new_amount: parseFloat(editedBalances.checking) });
+      }
+      if (userPlaidStatus.balancesEditable.savings) {
+        updates.push({ balance_name: 'savings', new_amount: parseFloat(editedBalances.savings) });
+      }
+      if (userPlaidStatus.balancesEditable.cash) {
+        updates.push({ balance_name: 'cash', new_amount: parseFloat(editedBalances.cash) });
+      }
+
+      // Use the new manual balance update endpoint
+      for (const update of updates) {
+        await axios.put(
+          "http://localhost:8000/user_balances/manual_balance_update/",
+          update,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
+      }
+      
+      onClose(); // This will trigger refresh
+    } catch (error) {
+      console.error("Error updating balances:", error);
+      alert("Failed to update balances. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Modal open={open} onClose={onClose}>
+      <Box sx={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        width: 400,
+        bgcolor: 'background.paper',
+        borderRadius: 2,
+        boxShadow: 24,
+        p: 4,
+      }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+          <Typography variant="h6">Edit Account Balances</Typography>
+          <IconButton onClick={onClose}>
+            <CloseIcon />
+          </IconButton>
+        </Box>
+
+        {userPlaidStatus.hasPlaid && (
+          <Box sx={{ mb: 2, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+            <Typography variant="body2" color="text.secondary">
+              Checking and Savings accounts are connected via Plaid and are read-only.
+            </Typography>
+          </Box>
+        )}
+
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              Checking Account
+              {userPlaidStatus.hasPlaid && (
+                <Chip label="Plaid" size="small" color="primary" variant="outlined" />
+              )}
+            </Typography>
+            <TextField
+              fullWidth
+              type="number"
+              value={editedBalances.checking}
+              onChange={(e) => setEditedBalances(prev => ({ ...prev, checking: e.target.value }))}
+              disabled={!userPlaidStatus.balancesEditable.checking}
+              inputProps={{ step: '0.01' }}
+            />
+          </Box>
+
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+              Savings Account
+              {userPlaidStatus.hasPlaid && (
+                <Chip label="Plaid" size="small" color="primary" variant="outlined" />
+              )}
+            </Typography>
+            <TextField
+              fullWidth
+              type="number"
+              value={editedBalances.savings}
+              onChange={(e) => setEditedBalances(prev => ({ ...prev, savings: e.target.value }))}
+              disabled={!userPlaidStatus.balancesEditable.savings}
+              inputProps={{ step: '0.01' }}
+            />
+          </Box>
+
+          <Box>
+            <Typography variant="body2" sx={{ mb: 1 }}>
+              Cash
+            </Typography>
+            <TextField
+              fullWidth
+              type="number"
+              value={editedBalances.cash}
+              onChange={(e) => setEditedBalances(prev => ({ ...prev, cash: e.target.value }))}
+              disabled={!userPlaidStatus.balancesEditable.cash}
+              inputProps={{ step: '0.01' }}
+            />
+          </Box>
+        </Box>
+
+        <Box sx={{ display: 'flex', gap: 2, mt: 3, justifyContent: 'flex-end' }}>
+          <Button variant="outlined" onClick={onClose} disabled={isSaving}>
+            Cancel
+          </Button>
+          <Button variant="contained" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
+        </Box>
+      </Box>
+    </Modal>
+  );
+};
+
+const CardCarousel = ({ refreshTrigger = 0 }) => {
   const [activeCard, setActiveCard] = useState(0);
   
   const cards = [
     {
       title: "My Accounts",
-      component: <MyAccounts />
+      component: <MyAccounts refreshTrigger={refreshTrigger} />
     },
     {
       title: "Recent Transactions", 
@@ -298,8 +341,14 @@ const Budget = () => {
   const [isEditTransactionsOpen, setIsEditTransactionsOpen] = useState(false);
   const [isManageBudgetsOpen, setIsManageBudgetsOpen] = useState(false);
   const [isEditAccountsOpen, setIsEditAccountsOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // console.log("Budget component is rendering");
+
+  // Function to refresh account balances
+  const handleBalanceUpdate = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
 
   return (
     <Box sx={{ padding: "20px", width: '100%', maxWidth: '100vw', minHeight: '100vh', overflowX: 'hidden', overflowY: 'auto', boxSizing: 'border-box' }}>
@@ -340,7 +389,7 @@ const Budget = () => {
             maxWidth: '300px',
             margin: 1
           }}>
-            <CardCarousel />
+            <CardCarousel refreshTrigger={refreshTrigger} />
           </Box>
 
           <Box sx={{ 
@@ -366,7 +415,11 @@ const Budget = () => {
         <ManageBudgets onClose={() => setIsManageBudgetsOpen(false)} />
       )}
       {isEditAccountsOpen && (
-        <EditAccounts onClose={() => setIsEditAccountsOpen(false)} />
+        <EditAccounts 
+          open={isEditAccountsOpen} 
+          onClose={() => setIsEditAccountsOpen(false)} 
+          onBalanceUpdate={handleBalanceUpdate}
+        />
       )}
     </Box>
   )

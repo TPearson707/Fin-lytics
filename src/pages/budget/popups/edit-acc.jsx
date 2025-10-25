@@ -1,125 +1,234 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import {
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
-    Button,
-    Typography,
-    List,
-    ListItem,
-    ListItemText,
-    TextField,
     IconButton,
-    Box,
+    Button,
+    Alert,
+    Typography,
+    Stack,
     Card,
     CardContent,
-    Stack,
+    TextField,
+    Box,
     Chip,
-    Alert,
-} from "@mui/material";
-import CloseIcon from '@mui/icons-material/Close';
-import EditIcon from '@mui/icons-material/Edit';
-import CheckIcon from '@mui/icons-material/Check';
-import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import SavingsIcon from '@mui/icons-material/Savings';
-import CreditCardIcon from '@mui/icons-material/CreditCard';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import InfoIcon from '@mui/icons-material/Info';
-import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
-import TrendingUpIcon from '@mui/icons-material/TrendingUp';
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPencil, faCheck } from "@fortawesome/free-solid-svg-icons";
-import axios from "axios";
+} from '@mui/material';
+import {
+    Close as CloseIcon,
+    Edit as EditIcon,
+    Check as CheckIcon,
+    AccountBalance as AccountBalanceIcon,
+    Savings as SavingsIcon,
+    AttachMoney as AttachMoneyIcon,
+} from '@mui/icons-material';
 
-const EditAccounts = ({ onClose }) => {
+const EditAccounts = ({ open, onClose, onBalanceUpdate }) => {
     const [balances, setBalances] = useState({
         checking: 0,
         savings: 0,
-        debit: 0,
-        credit: 0,
         cash: 0,
     });
+
+    const [userPlaidStatus, setUserPlaidStatus] = useState({
+        hasPlaid: false,
+        balancesEditable: true
+    });
+
+    // Individual input states for each account type
+    const [checkingInput, setCheckingInput] = useState(0);
+    const [savingsInput, setSavingsInput] = useState(0);
     const [cashInput, setCashInput] = useState(0);
+
+    // Individual editing states
+    const [isEditingChecking, setIsEditingChecking] = useState(false);
+    const [isEditingSavings, setIsEditingSavings] = useState(false);
     const [isEditingCash, setIsEditingCash] = useState(false);
 
+    // Fetch initial balance data
     const fetchBalances = async () => {
         try {
-            const token = localStorage.getItem("token");
-            const response = await axios.get("http://localhost:8000/user_balances/", {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true,
+            const response = await fetch('http://localhost:8000/user_balances/', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
             });
 
-            const { plaid_balances, cash_balance } = response.data;
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Fetched balance data:', data);
+                
+                // Set balances from unified endpoint
+                setBalances({
+                    checking: data.manual_balances?.checking || 0,
+                    savings: data.manual_balances?.savings || 0,
+                    cash: data.cash_balance || 0,  // Cash comes from separate field
+                });
+                console.log('Updated UI balances:', {
+                    checking: data.manual_balances?.checking || 0,
+                    savings: data.manual_balances?.savings || 0,
+                    cash: data.cash_balance || 0,
+                });
 
-            const debit = plaid_balances
-                .filter(account => account.type === "depository")
-                .reduce((sum, account) => sum + (account.balance || 0), 0);
-
-            const savings = plaid_balances
-                .filter(account => account.subtype === "savings")
-                .reduce((sum, account) => sum + (account.balance || 0), 0);
-
-            const checking = plaid_balances
-                .filter(account => account.subtype === "checking")
-                .reduce((sum, account) => sum + (account.balance || 0), 0);
-
-            const credit = plaid_balances
-                .filter(account => account.type === "credit")
-                .reduce((sum, account) => sum + (account.balance || 0), 0);
-
-            setBalances({ debit, credit, cash: cash_balance, savings, checking });
-            setCashInput(cash_balance);
+                // Set Plaid status from unified endpoint
+                setUserPlaidStatus({
+                    hasPlaid: data.has_plaid || false,
+                    balancesEditable: data.balances_editable || false
+                });
+            } else if (response.status === 401) {
+                console.error('Authentication failed - user not logged in');
+                // You might want to redirect to login or show an auth error
+            } else {
+                console.error('Failed to fetch balances - status:', response.status);
+            }
         } catch (error) {
-            console.error("Error fetching user balances:", error.response ? error.response.data : error);
+            console.error('Error fetching balances:', error);
         }
     };
 
     useEffect(() => {
-        fetchBalances();
-    }, []);
+        if (open) {
+            fetchBalances();
+        }
+    }, [open]);
 
+    // Handle updating checking account
+    const handleCheckingUpdate = async () => {
+        try {
+            const response = await fetch('http://localhost:8000/user_balances/manual_balance_update/', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    balance_name: 'checking',
+                    new_amount: checkingInput
+                }),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Checking balance update result:', result);
+                setBalances(prev => ({ ...prev, checking: checkingInput }));
+                setIsEditingChecking(false);
+                console.log('Checking balance updated successfully');
+                // Refresh balance data from backend to ensure consistency
+                await fetchBalances();
+                // Notify parent component to refresh
+                if (onBalanceUpdate) onBalanceUpdate();
+            } else {
+                console.error('Failed to update checking balance - status:', response.status);
+                const errorData = await response.text();
+                console.error('Error details:', errorData);
+            }
+        } catch (error) {
+            console.error('Error updating checking balance:', error);
+        }
+    };
+
+    // Handle updating savings account
+    const handleSavingsUpdate = async () => {
+        try {
+            const response = await fetch('http://localhost:8000/user_balances/manual_balance_update/', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    balance_name: 'savings',
+                    new_amount: savingsInput
+                }),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Savings balance update result:', result);
+                setBalances(prev => ({ ...prev, savings: savingsInput }));
+                setIsEditingSavings(false);
+                console.log('Savings balance updated successfully');
+                // Refresh balance data from backend to ensure consistency
+                await fetchBalances();
+                // Notify parent component to refresh
+                if (onBalanceUpdate) onBalanceUpdate();
+            } else {
+                console.error('Failed to update savings balance - status:', response.status);
+                const errorData = await response.text();
+                console.error('Error details:', errorData);
+            }
+        } catch (error) {
+            console.error('Error updating savings balance:', error);
+        }
+    };
+
+    // Handle updating cash
     const handleCashUpdate = async () => {
         try {
-            const token = localStorage.getItem("token");
-            await axios.post(
-                "http://localhost:8000/user_balances/update_cash_balance/",
-                { cash_balance: cashInput },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                }
-            );
+            const response = await fetch('http://localhost:8000/user_balances/manual_balance_update/', {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    balance_name: 'cash',
+                    new_amount: cashInput
+                }),
+            });
 
-            await fetchBalances();
-            setIsEditingCash(false);
+            if (response.ok) {
+                const result = await response.json();
+                console.log('Cash balance update result:', result);
+                setBalances(prev => ({ ...prev, cash: cashInput }));
+                setIsEditingCash(false);
+                console.log('Cash balance updated successfully');
+                // Refresh balance data from backend to ensure consistency
+                await fetchBalances();
+                // Notify parent component to refresh
+                if (onBalanceUpdate) onBalanceUpdate();
+            } else {
+                console.error('Failed to update cash balance - status:', response.status);
+                const errorData = await response.text();
+                console.error('Error details:', errorData);
+            }
         } catch (error) {
-            console.error("Error updating cash balance:", error.response ? error.response.data : error);
+            console.error('Error updating cash balance:', error);
         }
     };
 
     return (
-                <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+        <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
             <DialogTitle sx={{ position: 'relative', pb: 1 }}>
                 Account Balances
                 <IconButton
-                    aria-label="close"
                     onClick={onClose}
                     sx={{
                         position: 'absolute',
                         right: 8,
                         top: 8,
-                        color: (theme) => theme.palette.grey[500],
+                        color: 'grey.500',
                     }}
                 >
                     <CloseIcon />
                 </IconButton>
             </DialogTitle>
-                        <DialogContent>
-                <Alert severity="info" sx={{ mb: 2 }}>
-                    Your bank account balances are automatically synced through Plaid. Only cash balances can be manually edited.
-                </Alert>
+
+            <DialogContent>
+                {userPlaidStatus.hasPlaid && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        Your bank account balances are automatically synced through Plaid. Only cash balances can be manually edited.
+                    </Alert>
+                )}
+
+                {!userPlaidStatus.hasPlaid && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        You can manually edit all your account balances. Connect to Plaid for automatic bank account syncing.
+                    </Alert>
+                )}
 
                 <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <AccountBalanceIcon color="primary" />
@@ -127,56 +236,135 @@ const EditAccounts = ({ onClose }) => {
                 </Typography>
 
                 <Stack spacing={2}>
-                    {/* Bank Accounts - Read Only */}
-                    <Card variant="outlined" sx={{ backgroundColor: '#f8f9fa' }}>
+                    {/* Checking Account */}
+                    <Card variant="outlined" sx={{ 
+                        backgroundColor: userPlaidStatus.hasPlaid ? '#f8f9fa' : '#fefefe',
+                        borderColor: userPlaidStatus.hasPlaid ? undefined : '#2563eb'
+                    }}>
                         <CardContent sx={{ py: 2 }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: 'text.secondary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <AccountBalanceIcon fontSize="small" />
-                                Bank Accounts (Auto-Synced)
-                            </Typography>
-                            <Stack spacing={1}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <AccountBalanceIcon fontSize="small" color="primary" />
-                                        <Typography variant="body2">Checking Account</Typography>
-                                    </Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                        ${balances.checking?.toFixed(2) || "0.00"}
-                                    </Typography>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <AccountBalanceIcon fontSize="small" color="primary" />
+                                    <Typography variant="body2">Checking Account</Typography>
+                                    {userPlaidStatus.hasPlaid && (
+                                        <Chip label="Plaid" size="small" color="primary" variant="outlined" />
+                                    )}
+                                    {!userPlaidStatus.hasPlaid && (
+                                        <Chip label="Editable" size="small" color="primary" variant="outlined" />
+                                    )}
                                 </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <SavingsIcon fontSize="small" color="success" />
-                                        <Typography variant="body2">Savings Account</Typography>
-                                    </Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                        ${balances.savings?.toFixed(2) || "0.00"}
-                                    </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    {!userPlaidStatus.hasPlaid && isEditingChecking ? (
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <TextField
+                                                type="number"
+                                                value={checkingInput}
+                                                onChange={(e) => setCheckingInput(parseFloat(e.target.value) || 0)}
+                                                size="small"
+                                                sx={{ width: 120 }}
+                                                placeholder="0.00"
+                                                inputProps={{ step: '0.01', min: '0' }}
+                                            />
+                                            <IconButton
+                                                onClick={handleCheckingUpdate}
+                                                size="small"
+                                                sx={{ color: 'success.main' }}
+                                            >
+                                                <CheckIcon />
+                                            </IconButton>
+                                        </Stack>
+                                    ) : (
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 60 }}>
+                                                ${balances.checking?.toFixed(2) || "0.00"}
+                                            </Typography>
+                                            {!userPlaidStatus.hasPlaid && (
+                                                <IconButton
+                                                    onClick={() => {
+                                                        setIsEditingChecking(true);
+                                                        setCheckingInput(balances.checking || 0);
+                                                    }}
+                                                    size="small"
+                                                    sx={{ color: 'primary.main' }}
+                                                >
+                                                    <EditIcon />
+                                                </IconButton>
+                                            )}
+                                        </Stack>
+                                    )}
                                 </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <CreditCardIcon fontSize="small" color="warning" />
-                                        <Typography variant="body2">Credit Cards</Typography>
-                                    </Box>
-                                    <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                        ${balances.credit?.toFixed(2) || "0.00"}
-                                    </Typography>
-                                </Box>
-                            </Stack>
+                            </Box>
                         </CardContent>
                     </Card>
 
-                    {/* Cash - Editable */}
+                    {/* Savings Account */}
+                    <Card variant="outlined" sx={{ 
+                        backgroundColor: userPlaidStatus.hasPlaid ? '#f8f9fa' : '#fefefe',
+                        borderColor: userPlaidStatus.hasPlaid ? undefined : '#2563eb'
+                    }}>
+                        <CardContent sx={{ py: 2 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <SavingsIcon fontSize="small" color="success" />
+                                    <Typography variant="body2">Savings Account</Typography>
+                                    {userPlaidStatus.hasPlaid && (
+                                        <Chip label="Plaid" size="small" color="primary" variant="outlined" />
+                                    )}
+                                    {!userPlaidStatus.hasPlaid && (
+                                        <Chip label="Editable" size="small" color="primary" variant="outlined" />
+                                    )}
+                                </Box>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    {!userPlaidStatus.hasPlaid && isEditingSavings ? (
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <TextField
+                                                type="number"
+                                                value={savingsInput}
+                                                onChange={(e) => setSavingsInput(parseFloat(e.target.value) || 0)}
+                                                size="small"
+                                                sx={{ width: 120 }}
+                                                placeholder="0.00"
+                                                inputProps={{ step: '0.01', min: '0' }}
+                                            />
+                                            <IconButton
+                                                onClick={handleSavingsUpdate}
+                                                size="small"
+                                                sx={{ color: 'success.main' }}
+                                            >
+                                                <CheckIcon />
+                                            </IconButton>
+                                        </Stack>
+                                    ) : (
+                                        <Stack direction="row" spacing={1} alignItems="center">
+                                            <Typography variant="body2" sx={{ fontWeight: 500, minWidth: 60 }}>
+                                                ${balances.savings?.toFixed(2) || "0.00"}
+                                            </Typography>
+                                            {!userPlaidStatus.hasPlaid && (
+                                                <IconButton
+                                                    onClick={() => {
+                                                        setIsEditingSavings(true);
+                                                        setSavingsInput(balances.savings || 0);
+                                                    }}
+                                                    size="small"
+                                                    sx={{ color: 'primary.main' }}
+                                                >
+                                                    <EditIcon />
+                                                </IconButton>
+                                            )}
+                                        </Stack>
+                                    )}
+                                </Box>
+                            </Box>
+                        </CardContent>
+                    </Card>
+
+                    {/* Cash - Always Editable */}
                     <Card variant="outlined" sx={{ borderColor: '#2563eb', backgroundColor: '#fefefe' }}>
                         <CardContent sx={{ py: 2 }}>
-                            <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600, color: '#2563eb', display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <AccountBalanceWalletIcon fontSize="small" />
-                                Manual Entry
-                            </Typography>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <AttachMoneyIcon fontSize="small" sx={{ color: '#2563eb' }} />
-                                    <Typography variant="body2">Cash on Hand</Typography>
+                                    <Typography variant="body2">Cash</Typography>
                                     <Chip label="Editable" size="small" color="primary" variant="outlined" />
                                 </Box>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -210,39 +398,19 @@ const EditAccounts = ({ onClose }) => {
                                                     setCashInput(balances.cash || 0);
                                                 }}
                                                 size="small"
-                                                sx={{ color: '#2563eb' }}
+                                                sx={{ color: 'primary.main' }}
                                             >
-                                                <EditIcon fontSize="small" />
+                                                <EditIcon />
                                             </IconButton>
                                         </Stack>
                                     )}
                                 </Box>
                             </Box>
-                            {isEditingCash && (
-                                <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                    <InfoIcon fontSize="inherit" />
-                                    Enter the amount of cash you currently have on hand (wallet, home, etc.)
-                                </Typography>
-                            )}
-                        </CardContent>
-                    </Card>
-
-                    {/* Total Summary */}
-                    <Card variant="outlined" sx={{ backgroundColor: '#e8f5e8', borderColor: 'success.main' }}>
-                        <CardContent sx={{ py: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Typography variant="subtitle1" sx={{ fontWeight: 600, color: 'success.dark', display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <TrendingUpIcon />
-                                    Total Assets
-                                </Typography>
-                                <Typography variant="h6" sx={{ fontWeight: 700, color: 'success.dark' }}>
-                                    ${((balances.checking || 0) + (balances.savings || 0) + (balances.cash || 0)).toFixed(2)}
-                                </Typography>
-                            </Box>
                         </CardContent>
                     </Card>
                 </Stack>
             </DialogContent>
+
             <DialogActions>
                 <Button 
                     onClick={onClose}
