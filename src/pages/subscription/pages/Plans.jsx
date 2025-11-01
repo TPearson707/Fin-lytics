@@ -1,8 +1,15 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import Slider from "react-slick";
-import { Box, Typography, Card, CardContent, CardActions, Button } from "@mui/material";
+import { Box, Typography } from "@mui/material";
+import PlanCard from "../components/PlanCard";
+
+import "slick-carousel/slick/slick.css";
+import "slick-carousel/slick/slick-theme.css";
 
 const Plans = () => {
+  const navigate = useNavigate();
+
   const plans = [
     {
       title: "Plus",
@@ -21,60 +28,66 @@ const Plans = () => {
     },
   ];
 
+  const handleSelect = (plan) => {
+    // pass plan data to payment
+    navigate("payment", { state: { plan } });
+  };
+
   const settings = {
     dots: true,
+    arrows: true,
     infinite: true,
-    speed: 500,
-    slidesToShow: 1,
+    speed: 600,
+    slidesToShow: 3,
     slidesToScroll: 1,
     centerMode: true,
-    centerPadding: "60px",
-    adaptiveHeight: true,
+    centerPadding: "40px",
+    responsive: [
+      {
+        breakpoint: 1200,
+        settings: { slidesToShow: 2 },
+      },
+      {
+        breakpoint: 768,
+        settings: { slidesToShow: 1 },
+      },
+    ],
   };
 
   return (
-    <Box sx={{ textAlign: "center", mt: 6 }}>
+    <Box sx={{ textAlign: "center", mt: 8 }}>
       <Typography variant="h4" fontWeight="bold" gutterBottom>
         Choose Your Plan!
       </Typography>
 
-      <Box sx={{ width: "80%", margin: "0 auto", mt: 4 }}>
+      <Typography variant="body1" color="text.secondary" sx={{ mb: 4 }}>
+        Upgrade your Fin-lytics experience with more data, insights, and smarter analytics.
+      </Typography>
+
+      <Box
+        sx={{
+          width: "85%",
+          maxWidth: "1200px",
+          margin: "0 auto",
+          ".slick-slide": {
+            display: "flex !important",
+            justifyContent: "center",
+            alignItems: "center",
+          },
+          ".slick-slide > div": {
+            width: "300px",
+          },
+        }}
+      >
         <Slider {...settings}>
           {plans.map((plan) => (
-            <Card
+            <PlanCard
               key={plan.title}
-              sx={{
-                mx: 2,
-                borderRadius: 3,
-                boxShadow: 4,
-                backgroundColor: "background.paper",
-                textAlign: "center",
-              }}
-            >
-              <CardContent>
-                <Typography variant="h5" fontWeight="bold" gutterBottom>
-                  {plan.title}
-                </Typography>
-                <Typography variant="h6" color="primary" gutterBottom>
-                  {plan.price}
-                </Typography>
-                {plan.features.map((f, i) => (
-                  <Typography variant="body2" key={i}>
-                    • {f}
-                  </Typography>
-                ))}
-              </CardContent>
-              <CardActions sx={{ justifyContent: "center", mb: 2 }}>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  size="large"
-                  sx={{ borderRadius: "20px", px: 4 }}
-                >
-                  Select
-                </Button>
-              </CardActions>
-            </Card>
+              title={plan.title}
+              price={plan.price}
+              features={plan.features}
+              onSelect={() => handleSelect(plan)}
+            />
           ))}
         </Slider>
       </Box>
