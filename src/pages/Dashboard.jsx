@@ -7,6 +7,7 @@ import Portfolio from "./portfolio/portfolio";
 import Stock from "./stock/stock";
 import "../styles/pages/dashboard/dashboard.scss";
 import StockInsights from "./stock/StockInsights";
+import Plans from "./subscription/pages/Plans";
 
 const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
@@ -20,6 +21,7 @@ const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
             <Route path="/budget" element={<Budget/>} />
             <Route path="/stock" element={<Stock />} />
             <Route path="/stock/:ticker" element={<StockInsights />} />
+            <Route path="/plans" element={<Plans />} />
           </Routes>
         </div>
       </div>

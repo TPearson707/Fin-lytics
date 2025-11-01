@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   AppBar,
   Toolbar,
@@ -23,6 +23,7 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleMenuOpen = (event) => {
     setAnchorEl(event.currentTarget);
@@ -36,6 +37,15 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
     localStorage.removeItem("token");
     setIsAuthenticated(false);
     navigate("/");
+  };
+
+  const validateNavigation = () => {
+    if (location.pathname === "/plans") {
+      console.warn("Already on /plans — skipping navigation.");
+      return;
+    }
+
+    navigate("/Plans");
   };
 
   useEffect(() => {
@@ -102,6 +112,14 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
             >
+              <MenuItem
+                onClick={() => {
+                  handleMenuClose();
+                  validateNavigation();
+                }}
+              >
+                Membership              
+              </MenuItem>
               <MenuItem
                 onClick={() => {
                   handleMenuClose();
