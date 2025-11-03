@@ -12,7 +12,15 @@ import MenuIcon from '@mui/icons-material/Menu';
 const IntroNavbar = () => {
     return (
         <Box sx={{ flexGrow: 1 }}>
-            <AppBar position="static" sx={{ backgroundColor: 'white', color: 'black' }}>
+            <AppBar position="static" sx={{ 
+                backgroundColor: 'white', 
+                color: 'black',
+                boxShadow: "none",
+                border: "1px solid rgba(0, 0, 0, 0.1)",
+                borderBottom: "2px solid rgba(0, 0, 0, 0.15)",
+                zIndex: 1300,
+                marginBottom: '2px'
+            }}>
                 <Toolbar>
                     {/* <IconButton
                         size="large"

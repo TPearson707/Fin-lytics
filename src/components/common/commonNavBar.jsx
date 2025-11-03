@@ -79,7 +79,15 @@ const DbNavbar = ({ isAuthenticated, setIsAuthenticated }) => {
   }, [isAuthenticated]);
 
   return (
-    <AppBar position="fixed" sx={{ backgroundColor: "white", color: "black", height: "64px" }}>
+    <AppBar position="fixed" sx={{ 
+      backgroundColor: "white", 
+      color: "black", 
+      height: "64px",
+      boxShadow: "none",
+      border: "1px solid rgba(0, 0, 0, 0.1)",
+      borderBottom: "2px solid rgba(0, 0, 0, 0.15)",
+      zIndex: 1300
+    }}>
       <Toolbar>
         <Box sx={{ flexGrow: 1 }}>
           <img
