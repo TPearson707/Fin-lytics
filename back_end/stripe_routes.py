@@ -117,15 +117,26 @@ async def get_subscription_status(
             subscription = stripe.Subscription.retrieve(user_model.subscription_id)
             
             # Get current period end (when current billing period ends)
-            # Access as dictionary or attribute depending on Stripe version
+            # For flexible billing subscriptions, current_period_end is in the subscription item, not the subscription
             current_period_end = None
             try:
+                # First try to get it from subscription level (standard billing)
                 if hasattr(subscription, 'current_period_end'):
-                    current_period_end = getattr(subscription, 'current_period_end', None)
-                elif isinstance(subscription, dict) and 'current_period_end' in subscription:
-                    current_period_end = subscription.get('current_period_end')
-            except (AttributeError, KeyError) as e:
-                print(f"Warning: Could not access current_period_end: {e}")
+                    test_value = getattr(subscription, 'current_period_end', None)
+                    if test_value is not None:
+                        current_period_end = test_value
+                
+                # If not found at subscription level, try subscription items (for flexible billing)
+                if current_period_end is None and hasattr(subscription, 'items') and subscription.items:
+                    items = subscription.items
+                    if hasattr(items, 'data') and items.data and len(items.data) > 0:
+                        first_item = items.data[0]
+                        if hasattr(first_item, 'current_period_end'):
+                            item_period_end = getattr(first_item, 'current_period_end', None)
+                            if item_period_end is not None:
+                                current_period_end = item_period_end
+            except Exception:
+                # Silently handle errors - just won't show billing date
                 current_period_end = None
             
             if current_period_end:
@@ -184,18 +195,16 @@ async def get_subscription_status(
                     response_data["next_billing_date"] = datetime.fromtimestamp(
                         int(current_period_end)
                     ).isoformat()
-            except (ValueError, TypeError, OSError) as e:
-                print(f"Warning: Could not convert timestamp to datetime: {e}")
+            except (ValueError, TypeError, OSError):
+                # Silently handle conversion errors
+                pass
                 
-        except (StripeError, InvalidRequestError) as e:
-            # If we can't retrieve subscription, log but don't fail
-            # Just return basic info without billing dates
-            print(f"Warning: Could not retrieve subscription details: {e}")
-        except Exception as e:
+        except (StripeError, InvalidRequestError):
+            # If we can't retrieve subscription, just return basic info without billing dates
+            pass
+        except Exception:
             # Any other error, just return basic info
-            print(f"Warning: Error fetching subscription details: {str(e)}")
-            import traceback
-            traceback.print_exc()  # Print full traceback for debugging
+            pass
     
     return response_data
 

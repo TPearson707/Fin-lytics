@@ -124,7 +124,6 @@ const SettingsBlock = () => {
         const response = await api.get("/stripe/subscription/status", {
           headers: { Authorization: `Bearer ${token}` },
         });
-        console.log("Subscription status response:", response.data); // Debug log
         setHasSubscription(response.data.has_subscription);
         setSubscriptionInfo({
           next_billing_date: response.data.next_billing_date || null,
@@ -491,13 +490,6 @@ const SettingsBlock = () => {
                   month: "long",
                   day: "numeric",
                 })}
-              </Typography>
-            )}
-            
-            {/* Debug: Show if we have subscription but no dates (for troubleshooting) */}
-            {hasSubscription && !subscriptionInfo.cancel_at && !subscriptionInfo.next_billing_date && (
-              <Typography variant="body2" sx={{ mb: 1, color: "text.secondary", fontStyle: "italic" }}>
-                Billing information loading...
               </Typography>
             )}
             
