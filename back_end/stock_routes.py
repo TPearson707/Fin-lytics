@@ -525,6 +525,67 @@ async def get_symbol_with_exchange(ticker: str):
     return {"symbol": f"{exchange}:{tv_ticker}"}
 
 
+@router.get("/search")
+async def search_stocks(query: str, limit: int = 10):
+    """
+    Search for stocks by symbol or company name.
+    Returns list of matching stocks with symbol, name, and exchange.
+    Matches the frontend SearchBar functionality.
+    """
+    try:
+        if not query or len(query) < 2:
+            return []
+        
+        if not fmp_api_key:
+            raise HTTPException(
+                status_code=500,
+                detail="FMP API key not configured"
+            )
+        
+        url = f"{fmp_base_url}/search"
+        params = {
+            'query': query,
+            'limit': limit,
+            'apikey': fmp_api_key
+        }
+        
+        # Run in thread executor to avoid blocking
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            executor,
+            lambda: requests.get(url, params=params, timeout=10)
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        # Handle error responses from FMP API
+        if not isinstance(data, list):
+            if isinstance(data, dict) and (data.get('error') or data.get('message')):
+                error_msg = data.get('error') or data.get('message')
+                logger.error(f"FMP API error: {error_msg}")
+                return []
+            return []
+        
+        # Format results to match frontend expectations
+        results = []
+        for item in data:
+            if item and item.get('symbol'):
+                results.append({
+                    "symbol": item.get("symbol", ""),
+                    "name": item.get("name", ""),
+                    "exchange": item.get("exchangeShortName", "")
+                })
+        
+        return results
+    
+    except requests.exceptions.RequestException as e:
+        logger.error(f"FMP search API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to search stocks: {str(e)}")
+    except Exception as e:
+        logger.error(f"Search error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to search stocks: {str(e)}")
+
+
 
 
 

@@ -16,8 +16,6 @@ export default function SearchBar({ placeholder = "Search Stocks..." }) {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const API_KEY = import.meta.env.VITE_FMP_API_KEY;
-  const BASE_URL = "https://financialmodelingprep.com/api/v3/search";
   const CACHE_DURATION_MIN = 10;
 
   // Fetch + cache suggestions
@@ -39,6 +37,7 @@ export default function SearchBar({ placeholder = "Search Stocks..." }) {
       if (cached && cachedTime) {
         const age = (Date.now() - Number(cachedTime)) / 1000 / 60;
         if (age < CACHE_DURATION_MIN) {
+          if (!active) return;
           setSuggestions(JSON.parse(cached));
           return;
         }
@@ -46,26 +45,36 @@ export default function SearchBar({ placeholder = "Search Stocks..." }) {
 
       try {
         setLoading(true);
+        // Call backend API endpoint
         const res = await fetch(
-          `${BASE_URL}?query=${debouncedQuery}&limit=10&apikey=${API_KEY}`
+          `http://localhost:8000/stocks/search?query=${encodeURIComponent(debouncedQuery)}&limit=10`
         );
+        
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        
         const data = await res.json();
 
-        const results = data.map((d) => ({
-          symbol: d.symbol,
-          name: d.name,
-          exchange: d.exchangeShortName,
-        }));
+        // Backend already formats the data correctly
+        const results = Array.isArray(data) ? data : [];
 
         if (!active) return;
         setSuggestions(results);
 
-        localStorage.setItem(cacheKey, JSON.stringify(results));
-        localStorage.setItem(cacheTimeKey, String(Date.now()));
+        // Only cache if we got valid results
+        if (results.length > 0) {
+          localStorage.setItem(cacheKey, JSON.stringify(results));
+          localStorage.setItem(cacheTimeKey, String(Date.now()));
+        }
       } catch (e) {
         console.error("Search fetch failed", e);
+        if (!active) return;
+        setSuggestions([]);
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     }
 
