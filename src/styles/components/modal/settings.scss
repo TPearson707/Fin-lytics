@@ -1,0 +1,179 @@
+.settings-section{
+    border-top: 1px solid #a7a7a7;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+
+    h3{
+        margin-bottom: 20px;
+    }
+}
+
+.notif-block{
+    justify-content: space-between;
+    align-items: center;
+    display: flex;
+    border-top: 1px solid #cfcfcf;
+    padding-top: 10px;
+    padding-bottom: 10px;
+
+    .toggle{
+        margin-top: 5px;
+    }
+}
+
+.mini-text{
+    font-size: xx-small;
+    font-style: italic;
+}
+
+.plaid{
+    width: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgb(255, 255, 255);
+    font: inherit;
+    background-color: #000000;
+    transition: background-color 0.2s;
+
+    &:hover{
+        background-color: #394e42;
+        cursor: pointer;
+    }
+
+    .plaid-logo{
+        padding: 0;
+        margin: 0;
+        width: 30px;
+    }
+}
+
+
+.account-block {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #cfcfcf;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    transition: all 0.3s ease;
+
+    &.expanded {
+        margin-bottom: 20px;
+    }
+
+    .form-btn {
+        background-color: #ffffff;
+        font: inherit;
+        font-size: x-small;
+        border: none;
+        padding: 5px 10px;
+        display: flex;
+        align-items: center;
+
+        &:hover {
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .arrow {
+            margin-left: 5px;
+            transition: transform 0.3s ease;
+        }
+
+        &.expanded .arrow {
+            transform: rotate(180deg);
+        }
+    }
+    .submit-container{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        width: 90%;
+        margin: 0 auto;
+        margin-top: 5px;
+    }
+    .form-block{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .submit-btn{
+        background-color: #000000;
+        color: #ffffff;
+        font: inherit;
+        font-size: small;
+        padding: 5px 10px;
+        margin: 5px;
+        border: none;
+        border-radius: 30px;
+        transition: background-color 0.3s ease;
+
+        &:hover{
+            background-color: #394e42;
+            cursor: pointer;
+        }
+    }
+
+    input{
+        width: 50%;
+        padding: 5px;
+        font: inherit;
+        font-size: small;
+        border: 1px solid #cfcfcf;
+        border-radius: 5px;
+    }
+}
+
+.investment-actions {
+    margin-top: 20px;
+    padding: 15px;
+    border-top: 1px solid #e0e0e0;
+    
+    h4 {
+        margin-bottom: 15px;
+        font-size: 16px;
+        color: #333;
+    }
+    
+    .brokerage-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #2d88ff;
+        color: white;
+        padding: 10px 15px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background-color 0.2s;
+        width: 100%;
+        
+        &:hover {
+            background-color: #1a7ae8;
+        }
+        
+        &:active {
+            background-color: #0d6efd;
+        }
+        
+        &:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .plaid-logo {
+            height: 20px;
+            margin-right: 10px;
+        }
+    }
+}
+

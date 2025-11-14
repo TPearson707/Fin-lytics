@@ -10,7 +10,6 @@ router = APIRouter(
     tags=['user_categories']
 )
 
-# ==================== Dependencies ====================
 def get_db():
     db = SessionLocal()
     try:
@@ -20,7 +19,6 @@ def get_db():
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
-# ==================== Schemas ====================
 class UserCategoryCreate(BaseModel):
     name: str
     color: str
@@ -31,7 +29,6 @@ class UserCategoryUpdate(BaseModel):
     color: str
     weekly_limit: float | None = None
 
-# ==================== Logic ====================
 def get_user_categories(user_id: int, db: Session):
     user = db.query(Users).filter(Users.id == user_id).first()
     if not user:
@@ -106,17 +103,17 @@ def delete_user_category(category_id: int, db: Session):
 
 # ==================== Routes ====================
 @router.get("/{user_id}", status_code=status.HTTP_200_OK)
-async def get(user_id: int, db: db_dependency):
+async def get(user_id: int, db: Session = Depends(get_db)):
     return get_user_categories(user_id, db)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create(user_id: int, data: UserCategoryCreate, db: db_dependency):
-    return create_user_category(user_id, data, db)
+async def create(data: UserCategoryCreate, db: Session = Depends(get_db)):
+    return create_user_category(data.user_id, data, db)
 
 @router.put("/{category_id}", status_code=status.HTTP_200_OK)
-async def update(category_id: int, data: UserCategoryUpdate, db: db_dependency):
+async def update(category_id: int, data: UserCategoryUpdate, db: Session = Depends(get_db)):
     return update_user_category(category_id, data, db)
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete(category_id: int, db: db_dependency):
+async def delete(category_id: int, db: Session = Depends(get_db)):
     return delete_user_category(category_id, db)

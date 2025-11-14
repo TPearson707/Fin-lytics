@@ -1,0 +1,126 @@
+.page-container {
+  .left-col {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-left: 0; // flush to the left
+
+    > .quick-card,
+    > .myaccounts-card,
+    > .transactions-card,
+    > .visual-card {
+    padding-top: 22px; // small extra top padding so input labels don't touch the card edge
+    }
+  }
+
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    padding-left: 15px; 
+
+    .tall-card {
+      flex: 1 1 50%;
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  > .MuiBox-root, .page-container-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .quick-card-content, .header-quick-access {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  }
+
+  .card-title {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 12px;
+    color: #333;
+    padding: 15px;
+    padding-bottom: 5
+  }
+
+  .card-content {
+    padding: 15px;
+   
+    .card-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      button {
+        background-color: #609978;
+        color: #fff;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+
+        &:hover {
+          background-color: #4a7a5e;
+        }
+      }
+    }
+  }
+}
+
+.myaccounts-card {
+  .card-content {
+    .card-body {
+      li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        margin-bottom: 4px;
+        background-color: transparent;
+
+        .balance-edit {
+          input {
+            text-align: right;
+            width: 120px;
+            padding: 4px 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+          }
+        }
+      }
+
+      .balance-actions {
+        margin-top: 16px;
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+
+        button {
+          font: inherit;
+          padding: 5px 10px;
+          background-color: transparent;
+          border: none;
+          color: #313531;
+
+          &:hover {
+            color: #54695d;
+            cursor: pointer;
+          }
+        }
+      }
+    }
+  }
+}
+
+.projections-card {
+  .card-body {
+    margin-top: 6px; /* nudge body contents down a bit */
+  }
+}

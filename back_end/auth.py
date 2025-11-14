@@ -52,52 +52,72 @@ db_dependency = Annotated[Session, Depends(get_db)]
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=Token)
 async def create_user(db: db_dependency, create_user_request: CreateUserRequest):
     """Registers a new user with hashed password and sends a verification email."""
-    existing_user = db.query(Users).filter(Users.username == create_user_request.username).first()
-    if existing_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this username already exists")
+    try:
+        # Check for existing user
+        existing_user = db.query(Users).filter(Users.username == create_user_request.username).first()
+        if existing_user:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this username already exists")
 
-    existing_number = db.query(Users).filter(Users.phone_number == create_user_request.phone_number).first()
-    if existing_number:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this phone number already exists")
+        existing_email = db.query(Users).filter(Users.email == create_user_request.email).first()
+        if existing_email:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this email already exists")
 
-    verification_token = generate_verification_token(create_user_request.email)
-    create_user_model = Users(
-        first_name=create_user_request.first_name,
-        last_name=create_user_request.last_name,
-        email=create_user_request.email,
-        username=create_user_request.username,
-        phone_number=create_user_request.phone_number,
-        hashed_password=bcrypt.hash(create_user_request.password),
-        verification_token=verification_token
-    )
-    db.add(create_user_model)
-    db.commit()
-    db.refresh(create_user_model)  # Refresh to get the user ID
+        existing_number = db.query(Users).filter(Users.phone_number == create_user_request.phone_number).first()
+        if existing_number:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User with this phone number already exists")
 
-    # Create three User_Balance instances
-    balance_types = ["checking", "savings", "cash"]
-    for balance_type in balance_types:
-        user_balance = User_Balance(
-            id=create_user_model.id,
-            balance_name=balance_type,
-            balance_amount=0.0,
-            previous_balance=0.0,
-            balance_date=datetime.utcnow()
+        verification_token = generate_verification_token(create_user_request.email)
+        create_user_model = Users(
+            first_name=create_user_request.first_name,
+            last_name=create_user_request.last_name,
+            email=create_user_request.email,
+            username=create_user_request.username,
+            phone_number=create_user_request.phone_number,
+            hashed_password=bcrypt.hash(create_user_request.password),
+            verification_token=verification_token,
+            is_verified=False  # Users must verify their email before logging in
         )
-        db.add(user_balance)
+        db.add(create_user_model)
+        db.commit()
+        db.refresh(create_user_model)  # Refresh to get the user ID
+
+        # Create three User_Balance instances
+        balance_types = ["checking", "savings", "cash"]
+        for balance_type in balance_types:
+            user_balance = User_Balance(
+                id=create_user_model.id,
+                balance_name=balance_type,
+                balance_amount=0.0,
+                previous_balance=0.0,
+                balance_date=datetime.utcnow()
+            )
+            db.add(user_balance)
+        
+        db.commit()
+
+        # Try to send email, but don't fail if it doesn't work
+        try:
+            verification_link = f"http://localhost:8000/auth/verify_email?token={verification_token}"
+            email_content = f"Welcome to Fin-lytics! Click the link to verify your email: {verification_link}"
+            send_email(create_user_request.email, "Verify your email", email_content)
+        except Exception as email_error:
+            print(f"Email sending failed: {email_error}")
+            # Continue without failing the registration
+
+        user_settings = Settings(user_id=create_user_model.id, email_notifications=False, push_notifications=False)
+        db.add(user_settings)
+        db.commit()
+
+        # Create a token even for unverified users - they just can't use protected routes until verified
+        token = create_access_token(create_user_model.username, create_user_model.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+        return {"access_token": token, "token_type": "bearer"}
     
-    db.commit()
-
-    verification_link = f"http://localhost:8000/auth/verify_email?token={verification_token}"
-    email_content = f"Click the link to verify your email: {verification_link}"
-    send_email(create_user_request.email, "Verify your email", email_content)
-
-    user_settings = Settings(user_id=create_user_model.id, email_notifications=False, sms_notifications=False, push_notifications=False)
-    db.add(user_settings)
-    db.commit()
-
-    token = create_access_token(create_user_model.username, create_user_model.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    return {"access_token": token, "token_type": "bearer"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Signup error: {e}")
+        db.rollback()
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Registration failed: {str(e)}")
 
 @router.post("/token", response_model=Token)
 async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
@@ -105,6 +125,9 @@ async def login_for_access_token(form_data: Annotated[OAuth2PasswordRequestForm,
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect username or password", headers={"WWW-Authenticate": "Bearer"})
+    
+    if user == "unverified":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Email not verified. Please check your email and verify your account before logging in.", headers={"WWW-Authenticate": "Bearer"})
 
     token = create_access_token(user.username, user.id, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     return {"access_token": token, "token_type": "bearer"}
@@ -114,6 +137,8 @@ def authenticate_user(username: str, password: str, db):
     user = db.query(Users).filter(Users.username == username).first()
     if not user or not bcrypt.verify(password, user.hashed_password):
         return False
+    if not user.is_verified:
+        return "unverified"
     return user
 
 def create_access_token(username: str, user_id: int, expires_delta: timedelta):
@@ -137,11 +162,17 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)], db: db
                 headers={"WWW-Authenticate": "Bearer"},
             )
         user = db.query(Users).filter(Users.id == user_id).first()
-        if not user or not user.is_verified:
-            print("Validation failed: User not found or not verified")  # Debug
+        if not user:
+            print("Validation failed: User not found")  # Debug
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Email not verified"
+                detail="User not found"
+            )
+        if not user.is_verified:
+            print("Validation failed: User not verified")  # Debug
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Email not verified. Please check your email and verify your account before logging in."
             )
         return {'first_name': user.first_name, 'last_name': user.last_name, 'username': user.username, 'id': user.id}
     except JWTError as e:
@@ -210,6 +241,34 @@ async def verify_email(token: str, db: db_dependency):
     db.commit()
     
     return "Email verified successfully"
+
+# Pydantic model for resend verification
+class ResendVerificationRequest(BaseModel):
+    email: str
+
+#Endpoint to resend verification email
+@router.post("/resend_verification")
+async def resend_verification(resend_request: ResendVerificationRequest, db: db_dependency):
+    user = db.query(Users).filter(Users.email == resend_request.email).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if user.is_verified:
+        raise HTTPException(status_code=400, detail="Email already verified")
+    
+    # Generate new verification token
+    verification_token = generate_verification_token(resend_request.email)
+    user.verification_token = verification_token
+    db.commit()
+    
+    # Send verification email
+    try:
+        verification_link = f"http://localhost:8000/auth/verify_email?token={verification_token}"
+        email_content = f"Welcome to Fin-lytics! Click the link to verify your email: {verification_link}"
+        send_email(resend_request.email, "Verify your email", email_content)
+        return {"message": "Verification email sent successfully"}
+    except Exception as email_error:
+        print(f"Email sending failed: {email_error}")
+        raise HTTPException(status_code=500, detail="Failed to send verification email")
 
 def hashPassword(password: str):
     return bcrypt.hash(password);

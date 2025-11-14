@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
-import "./intropage.scss";
+import "../../styles/pages/intro/intropage.scss";
 import LoginBlock from './login';
-// import DemoBlock from "./demo";
+import Button from '@mui/material/Button';
+import { styled } from '@mui/material/styles';
+
+// const styledButton = styled(Button)({
+//     fontFamily: 'Quicksand, sans-serif',
+//     fontWeight: 'bold',
+//     fontSize: '15px',
+// });
 
 const Intropage = ({setIsAuthenticated}) => {
     const [showLogin, setShowLogin] = useState(false);
@@ -22,19 +29,28 @@ const Intropage = ({setIsAuthenticated}) => {
                 <p className="description-text">
                     Your first step to mastering your finances. Invest, save, and grow wealth using AI-driven insights.
                 </p>
-                <button className="signup-button" onClick={() => toggleLoginBlock(true)}>
+                <Button 
+                    variant="contained" 
+                    color="primary" 
+                    className="signup-button" 
+                    onClick={() => toggleLoginBlock(true)}
+                >
                     Sign Up for Free
-                </button>
-                <a href="#" className="signin-button" onClick={() => toggleLoginBlock(false)}>
+                </Button>
+                <Button 
+                    variant="text" 
+                    color="contrast" 
+                    className="signin-button" 
+                    onClick={() => toggleLoginBlock(false)}
+                >
                     Already have an account? Sign in here.
-                </a>
+                </Button>
             </section>
 
             {showLogin && (
                 <div className="overlay">
                     <div className="login-overlay">
                         <LoginBlock toggleLoginBlock={() => setShowLogin(false)} isSigningUp={isSigningUp} setIsAuthenticated={setIsAuthenticated}/>                    
-                        {/* <LoginBlock setIsAuthenticated={setIsAuthenticated} /> */}
                     </div>
                 </div>
             )}

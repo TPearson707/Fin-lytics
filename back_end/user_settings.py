@@ -27,7 +27,6 @@ user_dependency = Annotated[dict, Depends(get_current_user)]
 
 class SettingsUpdateRequest(BaseModel):
     email_notifications: bool
-    sms_notifications: bool
     push_notifications: bool
 
 # ==================== Logic ====================
@@ -40,7 +39,6 @@ def get_user_settings_logic(user: dict, db: Session):
 
     return {
         "email_notifications": settings.email_notifications,
-        "sms_notifications": settings.sms_notifications,
         "push_notifications": settings.push_notifications
     }
 
@@ -51,13 +49,11 @@ def update_user_settings_logic(user: dict, db: Session, settings_update: Setting
         settings = Settings(
             user_id=user["id"],
             email_notifications=settings_update.email_notifications,
-            sms_notifications=settings_update.sms_notifications,
             push_notifications=settings_update.push_notifications,
         )
         db.add(settings)
     else:
         settings.email_notifications = settings_update.email_notifications
-        settings.sms_notifications = settings_update.sms_notifications
         settings.push_notifications = settings_update.push_notifications
 
     db.commit()
@@ -65,7 +61,6 @@ def update_user_settings_logic(user: dict, db: Session, settings_update: Setting
 
     return {
         "email_notifications": settings.email_notifications,
-        "sms_notifications": settings.sms_notifications,
         "push_notifications": settings.push_notifications
     }
 

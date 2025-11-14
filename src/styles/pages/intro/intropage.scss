@@ -1,0 +1,134 @@
+.intropage{
+    height: 100vh; 
+    scroll-behavior: smooth;
+    // overflow: wrap;
+    display: flex;
+    // position: relative;
+}
+
+.screen-section{
+    height: 100vh; 
+    width: 100%; 
+}
+
+.hero-section {
+    display: block;
+    transform: translateY(20%);
+    justify-content: left;
+    margin-left: 50px;
+    height: 100vh;
+    width: 65%;
+    color: rgb(71, 71, 71);
+}
+
+.intro-text {
+    font-size: 2.5rem;
+    font-weight: bold;
+    white-space: normal;
+    word-wrap: break-word;
+    filter: blur(5px);  
+    opacity: 0; 
+    animation: fadeInBlur 2s ease-out forwards; 
+    padding-bottom: 25px;
+}
+
+.description-text{
+    opacity: 0; 
+    animation: fadeInBlur 2s ease-out forwards; 
+    animation-delay: 0.5s;
+    width: 70%;
+    color: rgb(113, 113, 113);
+    padding-bottom: 25px;
+}
+
+.signup-button{
+    padding: 10px;
+    font: inherit;
+    background-color: rgb(75, 102, 80);
+    color: rgb(255, 255, 255);
+    border-radius: 10px;
+    border: none;
+    text-align: center;
+    position: relative;
+    opacity: 0;
+    animation: fadeInBlur 2s ease-out forwards; 
+    animation-delay: 0.75s;
+    float: left;
+
+    &:after{
+        content: '»';
+        position: absolute;
+        opacity: 0;  
+        top: 50%;
+        right: -20px;
+        transform: translateY(-50%);
+        transition: 0.5s;
+    }
+
+    &:hover{
+        cursor: pointer;
+        transition: all 0.2s;
+        padding-right: 24px;
+        padding-left: 8px;
+    }
+}
+.signup-button:hover:after {
+    opacity: 1; 
+    right: 10px; 
+}
+
+.signin-button{
+    display: inline-flex;
+    margin: 10px 15px;
+    align-items: center;
+    font-size: 15px;
+    color: gray;
+    opacity: 0;
+    animation: fadeInBlur 2s ease-out forwards; 
+    animation-delay: 0.8s;
+    text-decoration: none;
+    
+    &:hover{
+        cursor: pointer;
+        text-decoration: underline;
+        color:rgb(102, 138, 108);
+    }
+}
+
+.login-overlay {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.248); 
+    z-index: 999; 
+    opacity: 0;
+    pointer-events: auto; 
+    animation: fadeInOverlay 0.5s ease-out forwards;
+}
+
+@keyframes fadeInOverlay {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeInBlur {
+    0% {
+        opacity: 0;
+        filter: blur(5px);
+        transform: translateY(30px);
+    }
+    100% {
+        opacity: 1;
+        filter: blur(0px); 
+        transform: translateY(0px);
+    }
+}

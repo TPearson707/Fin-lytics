@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pie Chart Debug Tool</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; cursor: pointer; }
+        .output { margin: 10px 0; padding: 10px; border: 1px solid #ccc; background: #f9f9f9; }
+        .error { background: #ffebee; border-color: #f44336; }
+        .success { background: #e8f5e9; border-color: #4caf50; }
+    </style>
+</head>
+<body>
+    <h1>Pie Chart Debug Tool</h1>
+    
+    <div>
+        <h3>Step 1: Get your token from localStorage</h3>
+        <button onclick="getToken()">Get Token</button>
+        <div id="token-output" class="output"></div>
+    </div>
+
+    <div>
+        <h3>Step 2: Check pie chart data</h3>
+        <button onclick="checkPieChartData()">Check Pie Chart Data</button>
+        <div id="pie-chart-output" class="output"></div>
+    </div>
+
+    <div>
+        <h3>Step 3: Refresh Plaid bank data</h3>
+        <button onclick="refreshBankData()">Refresh Bank Data</button>
+        <div id="refresh-output" class="output"></div>
+    </div>
+
+    <div>
+        <h3>Step 4: Check raw transactions</h3>
+        <button onclick="checkTransactions()">Check User Transactions</button>
+        <div id="transactions-output" class="output"></div>
+    </div>
+
+    <script>
+        let currentToken = '';
+
+        function getToken() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                currentToken = token;
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    document.getElementById('token-output').innerHTML = `
+                        <div class="success">
+                            <strong>Token found!</strong><br>
+                            User ID: ${payload.id}<br>
+                            Username: ${payload.username || 'N/A'}<br>
+                            Expires: ${new Date(payload.exp * 1000).toLocaleString()}
+                        </div>
+                    `;
+                } catch (e) {
+                    document.getElementById('token-output').innerHTML = `
+                        <div class="error">Token found but couldn't decode: ${e.message}</div>
+                    `;
+                }
+            } else {
+                document.getElementById('token-output').innerHTML = `
+                    <div class="error">No token found in localStorage</div>
+                `;
+            }
+        }
+
+        async function checkPieChartData() {
+            if (!currentToken) {
+                document.getElementById('pie-chart-output').innerHTML = `
+                    <div class="error">Please get your token first</div>
+                `;
+                return;
+            }
+
+            try {
+                const payload = JSON.parse(atob(currentToken.split('.')[1]));
+                const response = await fetch(`http://localhost:8000/pie_chart/${payload.id}`);
+                const data = await response.json();
+                
+                document.getElementById('pie-chart-output').innerHTML = `
+                    <div class="success">
+                        <strong>Pie Chart Data:</strong><br>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('pie-chart-output').innerHTML = `
+                    <div class="error">Error fetching pie chart data: ${e.message}</div>
+                `;
+            }
+        }
+
+        async function refreshBankData() {
+            if (!currentToken) {
+                document.getElementById('refresh-output').innerHTML = `
+                    <div class="error">Please get your token first</div>
+                `;
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/refresh_bank_data', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('refresh-output').innerHTML = `
+                        <div class="success">
+                            <strong>Bank data refresh successful!</strong><br>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('refresh-output').innerHTML = `
+                        <div class="error">
+                            <strong>Error refreshing bank data:</strong><br>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('refresh-output').innerHTML = `
+                    <div class="error">Error refreshing bank data: ${e.message}</div>
+                `;
+            }
+        }
+
+        async function checkTransactions() {
+            if (!currentToken) {
+                document.getElementById('transactions-output').innerHTML = `
+                    <div class="error">Please get your token first</div>
+                `;
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8000/user_transactions/', {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('transactions-output').innerHTML = `
+                        <div class="success">
+                            <strong>Transaction Data:</strong><br>
+                            <strong>Plaid Transactions:</strong> ${data.plaid_transactions?.length || 0} found<br>
+                            <strong>DB Transactions:</strong> ${data.db_transactions?.length || 0} found<br>
+                            <details>
+                                <summary>View Details</summary>
+                                <pre>${JSON.stringify(data, null, 2)}</pre>
+                            </details>
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('transactions-output').innerHTML = `
+                        <div class="error">
+                            <strong>Error fetching transactions:</strong><br>
+                            <pre>${JSON.stringify(data, null, 2)}</pre>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                document.getElementById('transactions-output').innerHTML = `
+                    <div class="error">Error fetching transactions: ${e.message}</div>
+                `;
+            }
+        }
+
+        // Auto-get token on page load
+        window.onload = getToken;
+    </script>
+</body>
+</html>
