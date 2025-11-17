@@ -588,6 +588,377 @@ async def search_stocks(query: str, limit: int = 10):
 
 
 
+# ---------------- Technical Indicators Endpoints ----------------
+
+@router.get("/indicators/sma/{ticker}")
+async def get_sma(
+    ticker: str,
+    timeframe: str = "daily",
+    period: int = 20,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get Simple Moving Average (SMA) for a ticker.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+        timeframe: Data interval (1min, 5min, 15min, 30min, 1hour, 4hour, daily)
+        period: Number of periods for SMA calculation (default: 20)
+    """
+    try:
+        if not fmp_api_key:
+            raise HTTPException(status_code=500, detail="FMP API key not configured")
+        
+        url = f"{fmp_base_url}/technical_indicator/{timeframe}/{ticker.upper()}"
+        params = {
+            'type': 'sma',
+            'period': period,
+            'apikey': fmp_api_key
+        }
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            executor,
+            lambda: requests.get(url, params=params, timeout=15)
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data or not isinstance(data, list):
+            raise HTTPException(status_code=404, detail=f"No SMA data found for {ticker}")
+        
+        return {
+            "ticker": ticker.upper(),
+            "indicator": "SMA",
+            "timeframe": timeframe,
+            "period": period,
+            "data": data
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"FMP SMA API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch SMA: {str(e)}")
+    except Exception as e:
+        logger.error(f"SMA error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch SMA: {str(e)}")
+
+
+@router.get("/indicators/ema/{ticker}")
+async def get_ema(
+    ticker: str,
+    timeframe: str = "daily",
+    period: int = 20,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get Exponential Moving Average (EMA) for a ticker.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+        timeframe: Data interval (1min, 5min, 15min, 30min, 1hour, 4hour, daily)
+        period: Number of periods for EMA calculation (default: 20)
+    """
+    try:
+        if not fmp_api_key:
+            raise HTTPException(status_code=500, detail="FMP API key not configured")
+        
+        url = f"{fmp_base_url}/technical_indicator/{timeframe}/{ticker.upper()}"
+        params = {
+            'type': 'ema',
+            'period': period,
+            'apikey': fmp_api_key
+        }
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            executor,
+            lambda: requests.get(url, params=params, timeout=15)
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data or not isinstance(data, list):
+            raise HTTPException(status_code=404, detail=f"No EMA data found for {ticker}")
+        
+        return {
+            "ticker": ticker.upper(),
+            "indicator": "EMA",
+            "timeframe": timeframe,
+            "period": period,
+            "data": data
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"FMP EMA API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch EMA: {str(e)}")
+    except Exception as e:
+        logger.error(f"EMA error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch EMA: {str(e)}")
+
+
+@router.get("/indicators/wma/{ticker}")
+async def get_wma(
+    ticker: str,
+    timeframe: str = "daily",
+    period: int = 20,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get Weighted Moving Average (WMA) for a ticker.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+        timeframe: Data interval (1min, 5min, 15min, 30min, 1hour, 4hour, daily)
+        period: Number of periods for WMA calculation (default: 20)
+    """
+    try:
+        if not fmp_api_key:
+            raise HTTPException(status_code=500, detail="FMP API key not configured")
+        
+        url = f"{fmp_base_url}/technical_indicator/{timeframe}/{ticker.upper()}"
+        params = {
+            'type': 'wma',
+            'period': period,
+            'apikey': fmp_api_key
+        }
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            executor,
+            lambda: requests.get(url, params=params, timeout=15)
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data or not isinstance(data, list):
+            raise HTTPException(status_code=404, detail=f"No WMA data found for {ticker}")
+        
+        return {
+            "ticker": ticker.upper(),
+            "indicator": "WMA",
+            "timeframe": timeframe,
+            "period": period,
+            "data": data
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"FMP WMA API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch WMA: {str(e)}")
+    except Exception as e:
+        logger.error(f"WMA error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch WMA: {str(e)}")
+
+
+@router.get("/indicators/rsi/{ticker}")
+async def get_rsi(
+    ticker: str,
+    timeframe: str = "daily",
+    period: int = 14,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get Relative Strength Index (RSI) for a ticker.
+    RSI oscillates between 0 and 100, typically indicating overbought (>70) or oversold (<30) conditions.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+        timeframe: Data interval (1min, 5min, 15min, 30min, 1hour, 4hour, daily)
+        period: Number of periods for RSI calculation (default: 14)
+    """
+    try:
+        if not fmp_api_key:
+            raise HTTPException(status_code=500, detail="FMP API key not configured")
+        
+        url = f"{fmp_base_url}/technical_indicator/{timeframe}/{ticker.upper()}"
+        params = {
+            'type': 'rsi',
+            'period': period,
+            'apikey': fmp_api_key
+        }
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            executor,
+            lambda: requests.get(url, params=params, timeout=15)
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data or not isinstance(data, list):
+            raise HTTPException(status_code=404, detail=f"No RSI data found for {ticker}")
+        
+        return {
+            "ticker": ticker.upper(),
+            "indicator": "RSI",
+            "timeframe": timeframe,
+            "period": period,
+            "data": data
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"FMP RSI API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch RSI: {str(e)}")
+    except Exception as e:
+        logger.error(f"RSI error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch RSI: {str(e)}")
+
+
+@router.get("/indicators/macd/{ticker}")
+async def get_macd(
+    ticker: str,
+    timeframe: str = "daily",
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get Moving Average Convergence Divergence (MACD) for a ticker.
+    MACD is a trend-following momentum indicator.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+        timeframe: Data interval (1min, 5min, 15min, 30min, 1hour, 4hour, daily)
+    """
+    try:
+        if not fmp_api_key:
+            raise HTTPException(status_code=500, detail="FMP API key not configured")
+        
+        url = f"{fmp_base_url}/technical_indicator/{timeframe}/{ticker.upper()}"
+        params = {
+            'type': 'macd',
+            'apikey': fmp_api_key
+        }
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            executor,
+            lambda: requests.get(url, params=params, timeout=15)
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data or not isinstance(data, list):
+            raise HTTPException(status_code=404, detail=f"No MACD data found for {ticker}")
+        
+        return {
+            "ticker": ticker.upper(),
+            "indicator": "MACD",
+            "timeframe": timeframe,
+            "data": data
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"FMP MACD API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch MACD: {str(e)}")
+    except Exception as e:
+        logger.error(f"MACD error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch MACD: {str(e)}")
+
+
+@router.get("/indicators/stochastic/{ticker}")
+async def get_stochastic(
+    ticker: str,
+    timeframe: str = "daily",
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get Stochastic Oscillator for a ticker.
+    Stochastic compares closing price to price range over a period, oscillating between 0 and 100.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+        timeframe: Data interval (1min, 5min, 15min, 30min, 1hour, 4hour, daily)
+    """
+    try:
+        if not fmp_api_key:
+            raise HTTPException(status_code=500, detail="FMP API key not configured")
+        
+        url = f"{fmp_base_url}/technical_indicator/{timeframe}/{ticker.upper()}"
+        params = {
+            'type': 'stochastic',
+            'apikey': fmp_api_key
+        }
+        
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            executor,
+            lambda: requests.get(url, params=params, timeout=15)
+        )
+        response.raise_for_status()
+        data = response.json()
+        
+        if not data or not isinstance(data, list):
+            raise HTTPException(status_code=404, detail=f"No Stochastic data found for {ticker}")
+        
+        return {
+            "ticker": ticker.upper(),
+            "indicator": "Stochastic",
+            "timeframe": timeframe,
+            "data": data
+        }
+    except requests.exceptions.RequestException as e:
+        logger.error(f"FMP Stochastic API error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Stochastic: {str(e)}")
+    except Exception as e:
+        logger.error(f"Stochastic error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch Stochastic: {str(e)}")
+
+
+@router.get("/indicators/all/{ticker}")
+async def get_all_indicators(
+    ticker: str,
+    timeframe: str = "daily",
+    ma_period: int = 20,
+    rsi_period: int = 14,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Get all technical indicators for a ticker in a single request.
+    Returns SMA, EMA, WMA, RSI, MACD, and Stochastic.
+    
+    Args:
+        ticker: Stock ticker symbol (e.g., AAPL)
+        timeframe: Data interval (1min, 5min, 15min, 30min, 1hour, 4hour, daily)
+        ma_period: Period for moving averages (default: 20)
+        rsi_period: Period for RSI (default: 14)
+    """
+    try:
+        if not fmp_api_key:
+            raise HTTPException(status_code=500, detail="FMP API key not configured")
+        
+        indicators = ['sma', 'ema', 'wma', 'rsi', 'macd', 'stochastic']
+        results = {}
+        
+        async def fetch_indicator(indicator_type: str):
+            url = f"{fmp_base_url}/technical_indicator/{timeframe}/{ticker.upper()}"
+            params = {'type': indicator_type, 'apikey': fmp_api_key}
+            
+            if indicator_type in ['sma', 'ema', 'wma']:
+                params['period'] = ma_period
+            elif indicator_type == 'rsi':
+                params['period'] = rsi_period
+            
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                executor,
+                lambda: requests.get(url, params=params, timeout=15)
+            )
+            response.raise_for_status()
+            return response.json()
+        
+        # Fetch all indicators concurrently
+        tasks = [fetch_indicator(ind) for ind in indicators]
+        data_list = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        for i, indicator_type in enumerate(indicators):
+            data = data_list[i]
+            if isinstance(data, Exception):
+                results[indicator_type] = {"error": str(data)}
+            else:
+                results[indicator_type] = data if data else []
+        
+        return {
+            "ticker": ticker.upper(),
+            "timeframe": timeframe,
+            "indicators": results
+        }
+    except Exception as e:
+        logger.error(f"All indicators error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to fetch indicators: {str(e)}")
+
 
 # ---------------- EOD data updater endpoints ----------------
 
