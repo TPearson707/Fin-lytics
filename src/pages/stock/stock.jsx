@@ -98,6 +98,33 @@ function Stock() {
     }
   }
 
+  async function fetchMovingAverages(ticker) {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(
+        `http://127.0.0.1:8000/stocks/indicators/all/${ticker}?timeframe=daily`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      if (!res.ok) return "SMA20: - | EMA20: -";
+
+      const data = await res.json();
+      const indicators = data.indicators || {};
+
+      const sma = indicators.sma?.slice(-1)[0]?.sma;
+      const ema = indicators.ema?.slice(-1)[0]?.ema;
+
+      return `SMA20: ${sma?.toFixed(2) ?? "-"} | EMA20: ${ema?.toFixed(2) ?? "-"}`;
+    } catch (err) {
+      console.error("MA fetch error:", err);
+      return "SMA20: - | EMA20: -";
+    }
+  }
+
+
   /** Fetch Chronos predictions */
   async function fetchChronosPredictions(forceRefresh = false) {
     try {
@@ -133,14 +160,25 @@ function Stock() {
 
       const data = await res.json();
 
-      const formatted = data.predictions.map((p) => [
-        p.ticker,
-        `$${p.predicted_price?.toFixed(2)}`,
-        p.confidence_low && p.confidence_high
-          ? `$${p.confidence_low?.toFixed(2)} – $${p.confidence_high?.toFixed(2)}`
-          : "—",
-        new Date(p.prediction_time ?? Date.now()).toLocaleString(),
-      ]);
+      const formatted = await Promise.all(
+        data.predictions.map(async (p) => {
+          const confidenceRange =
+            p.confidence_low && p.confidence_high
+              ? `$${p.confidence_low.toFixed(2)} – $${p.confidence_high.toFixed(2)}`
+              : "—";
+
+          const maText = await fetchMovingAverages(p.ticker);
+
+          return [
+            p.ticker,
+            `$${p.predicted_price?.toFixed(2)}`,
+            `${confidenceRange}\n${maText}`,
+            new Date(p.prediction_time ?? Date.now()).toLocaleString(),
+          ];
+        })
+      );
+
+
 
       setPredictions(formatted);
       setLastUpdated(new Date());
@@ -325,7 +363,7 @@ function Stock() {
                   >
                     <TableCell align="center">{ticker}</TableCell>
                     <TableCell align="center">{price}</TableCell>
-                    <TableCell align="center">{range}</TableCell>
+                    <TableCell align="center" sx={{ whiteSpace: "pre-line" }}>{range}</TableCell>
                     <TableCell align="center">{time}</TableCell>
                   </TableRow>
                 ))
