@@ -278,4 +278,26 @@ class Stock_Prediction(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
+class Algorithm_Listing(Base):
+    __tablename__ = "Algorithm_Listings"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
+    title = Column(String(255), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(100), nullable=True)  # e.g., "trading", "prediction", "analysis"
+    price = Column(Float, nullable=True)  # Optional pricing
+    file_path = Column(String(500), nullable=True)  # Path to uploaded algorithm file
+    file_name = Column(String(255), nullable=True)  # Original filename
+    file_size = Column(Integer, nullable=True)  # File size in bytes
+    version = Column(String(50), default="1.0.0")
+    is_active = Column(Boolean, default=True)
+    download_count = Column(Integer, default=0)
+    rating = Column(Float, nullable=True)  # Average rating
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = relationship("Users", backref="algorithm_listings")
+
+
 
