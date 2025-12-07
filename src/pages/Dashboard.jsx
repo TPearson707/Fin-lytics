@@ -8,6 +8,7 @@ import Stock from "./stock/stock";
 import StockInsights from "./stock/StockInsights";
 import Plans from "./subscription/pages/Plans";
 import Success from "./subscription/pages/Success";
+import Marketplace from "./marketplace/Marketplace";
 
 const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
@@ -35,6 +36,7 @@ const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
               <Route index element={<Plans />} /> {/* /dashboard/plans */}
               <Route path="success" element={<Success />} />
             </Route>
+            <Route path="/marketplace" element={<Marketplace />} />
           </Routes>
         </div>
       </div>
