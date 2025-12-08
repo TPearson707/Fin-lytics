@@ -9,6 +9,9 @@ import StockInsights from "./stock/StockInsights";
 import Plans from "./subscription/pages/Plans";
 import Success from "./subscription/pages/Success";
 import Marketplace from "./marketplace/Marketplace";
+import AlgorithmDetails from "./marketplace/AlgorithmDetails";
+import CreateListing from "./marketplace/CreateListing";
+import EditListing from "./marketplace/EditListing";
 
 const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
@@ -37,7 +40,15 @@ const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
               <Route path="success" element={<Success />} />
             </Route>
             <Route path="/marketplace" element={<Marketplace />} />
+
+            {/* FIX: put this BEFORE the dynamic route */}
+            <Route path="/marketplace/create" element={<CreateListing />} />
+            <Route path="/marketplace/edit/:id" element={<EditListing />} />
+
+            {/* Dynamic route always last */}
+            <Route path="/marketplace/:id" element={<AlgorithmDetails />} />
           </Routes>
+
         </div>
       </div>
     </div>

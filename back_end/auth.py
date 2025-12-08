@@ -272,3 +272,8 @@ async def resend_verification(resend_request: ResendVerificationRequest, db: db_
 
 def hashPassword(password: str):
     return bcrypt.hash(password);
+
+@router.get("/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    return user
+
