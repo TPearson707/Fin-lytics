@@ -14,11 +14,6 @@ import { useNavigate } from "react-router-dom";
 export default function AlgorithmCard({ algo }) {
   const navigate = useNavigate();
 
-  const handleViewDetails = () => {
-    // adjust route to whatever detail view you end up using
-    navigate(`/marketplace/${algo.id}`);
-  };
-
   return (
     <Card sx={{ p: 2, height: "100%", display: "flex", flexDirection: "column" }}>
       <CardContent sx={{ flexGrow: 1 }}>
@@ -44,35 +39,23 @@ export default function AlgorithmCard({ algo }) {
           {algo.description || "No description provided."}
         </Typography>
 
-        {algo.tags && algo.tags.length > 0 && (
+        {algo.tags?.length > 0 && (
           <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap", mb: 1.5 }}>
-            {algo.tags.slice(0, 3).map((tag) => (
+            {algo.tags.slice(0, 3).map(tag => (
               <Chip key={tag} label={tag} size="small" />
             ))}
             {algo.tags.length > 3 && (
-              <Chip
-                label={`+${algo.tags.length - 3}`}
-                size="small"
-                variant="outlined"
-              />
+              <Chip label={`+${algo.tags.length - 3}`} size="small" variant="outlined" />
             )}
           </Stack>
         )}
 
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            mt: 1,
-          }}
-        >
+        <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
           <Box>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {algo.price === 0 || algo.price === "0"
-                ? "Free"
-                : `$${Number(algo.price).toFixed(2)} / month`}
+              {algo.price === 0 ? "Free" : `$${algo.price.toFixed(2)} / month`}
             </Typography>
+
             {algo.updated_at && (
               <Typography variant="caption" sx={{ color: "text.secondary" }}>
                 Updated: {new Date(algo.updated_at).toLocaleDateString()}
@@ -81,31 +64,17 @@ export default function AlgorithmCard({ algo }) {
           </Box>
 
           <Box textAlign="right">
-            <Rating
-              value={Number(algo.rating) || 0}
-              precision={0.5}
-              readOnly
-              size="small"
-            />
-            {algo.num_reviews != null && (
-              <Typography variant="caption" sx={{ color: "text.secondary" }}>
-                {algo.num_reviews} review{algo.num_reviews === 1 ? "" : "s"}
-              </Typography>
-            )}
+            <Rating value={Number(algo.rating) || 0} precision={0.5} readOnly size="small" />
+            <Typography variant="caption" sx={{ color: "text.secondary" }}>
+              {algo.num_reviews ?? 0} reviews
+            </Typography>
           </Box>
         </Box>
       </CardContent>
 
-      <Box mt={2}>
-        <Button
-          fullWidth
-          variant="contained"
-          size="small"
-          onClick={handleViewDetails}
-        >
-          View Details
-        </Button>
-      </Box>
+      <Button fullWidth variant="contained" size="small" sx={{ mt: 2 }} onClick={() => navigate(`/marketplace/${algo.id}`)}>
+        View Details
+      </Button>
     </Card>
   );
 }

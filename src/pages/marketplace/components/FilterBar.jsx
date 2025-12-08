@@ -2,29 +2,13 @@ import React from "react";
 import { Box, TextField, MenuItem } from "@mui/material";
 
 export default function FilterBar({ filters, onChange }) {
-  const handleSearchChange = (e) => {
-    onChange({ search: e.target.value });
-  };
-
-  const handleSortChange = (e) => {
-    onChange({ sortBy: e.target.value });
-  };
-
   return (
-    <Box
-      sx={{
-        mb: 3,
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 2,
-        alignItems: "center",
-      }}
-    >
+    <Box sx={{ mb: 3, display: "flex", flexWrap: "wrap", gap: 2, alignItems: "center" }}>
       <TextField
         size="small"
         label="Search algorithms..."
         value={filters.search}
-        onChange={handleSearchChange}
+        onChange={e => onChange({ search: e.target.value })}
         sx={{ minWidth: 220, flex: 1 }}
       />
 
@@ -33,7 +17,7 @@ export default function FilterBar({ filters, onChange }) {
         size="small"
         label="Sort by"
         value={filters.sortBy}
-        onChange={handleSortChange}
+        onChange={e => onChange({ sortBy: e.target.value })}
         sx={{ minWidth: 180 }}
       >
         <MenuItem value="popular">Most Popular</MenuItem>
@@ -45,4 +29,3 @@ export default function FilterBar({ filters, onChange }) {
     </Box>
   );
 }
-

@@ -213,3 +213,8 @@ async def verify_email(token: str, db: db_dependency):
 
 def hashPassword(password: str):
     return bcrypt.hash(password);
+
+@router.get("/me")
+async def get_me(user: dict = Depends(get_current_user)):
+    return user
+
