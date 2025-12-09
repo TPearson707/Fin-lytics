@@ -53,7 +53,7 @@ export default function AlgorithmCard({ algo }) {
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
           <Box>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {algo.price === 0 ? "Free" : `$${algo.price.toFixed(2)} / month`}
+              {algo.price === 0 ? "Free" : `$${algo.price.toFixed(2)}`}
             </Typography>
 
             {algo.updated_at && (
