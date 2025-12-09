@@ -5,6 +5,7 @@ from database import SessionLocal
 from models import Plaid_Transactions, User_Categories, Users, Transaction_Category_Link, Plaid_Bank_Account
 from pydantic import BaseModel
 from user_categories import get_user_categories
+from datetime import datetime, timedelta
 
 router = APIRouter(
     prefix='/pie_chart',
@@ -21,16 +22,19 @@ def get_db():
 
 db_dependency = Annotated[Session, Depends(get_db)]
 
-# gets the sum of expenses per category 
+# gets the sum of expenses per category for the past 30 days
 def get_total_expenses_per_category(user_id: int, db: Session):
     categories = get_user_categories(user_id, db)
     category_expenses = {}
+    
+    # Calculate date 30 days ago (convert to date object to match database Date columns)
+    thirty_days_ago = (datetime.now() - timedelta(days=30)).date()
 
     for category in categories:
         try:
-            # Get Plaid transactions for this category
+            # Get Plaid transactions for this category (past 30 days)
             plaid_transactions = db.query(
-                Plaid_Transactions.amount
+                Plaid_Transactions.amount, Plaid_Transactions.date
             ).join(
                 Plaid_Bank_Account, 
                 Plaid_Transactions.account_id == Plaid_Bank_Account.account_id
@@ -39,19 +43,21 @@ def get_total_expenses_per_category(user_id: int, db: Session):
                 Plaid_Transactions.transaction_id == Transaction_Category_Link.transaction_id
             ).filter(
                 Plaid_Bank_Account.user_id == user_id,
-                Transaction_Category_Link.category_id == category["id"]
+                Transaction_Category_Link.category_id == category["id"],
+                Plaid_Transactions.date >= thirty_days_ago
             ).all()
             
-            # Get User transactions for this category
+            # Get User transactions for this category (past 30 days)
             from models import User_Transactions, User_Transaction_Category_Link
             user_transactions = db.query(
-                User_Transactions.amount
+                User_Transactions.amount, User_Transactions.date
             ).join(
                 User_Transaction_Category_Link,
                 User_Transactions.transaction_id == User_Transaction_Category_Link.transaction_id
             ).filter(
                 User_Transactions.user_id == user_id,
-                User_Transaction_Category_Link.category_id == category["id"]
+                User_Transaction_Category_Link.category_id == category["id"],
+                User_Transactions.date >= thirty_days_ago
             ).all()
             
             # Combine and calculate total expenses (use absolute value for expenses)

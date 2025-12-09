@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import Annotated, List, Optional
 from database import SessionLocal
-from models import Budget_Goals
+from models import Budget_Goals, User_Categories, Plaid_Transactions, Plaid_Bank_Account, Transaction_Category_Link, User_Transactions, User_Transaction_Category_Link
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, timedelta
 from auth import get_current_user
 
 router = APIRouter(
@@ -47,14 +47,66 @@ class BudgetGoalResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     is_active: bool
+    spent_this_month: Optional[float] = 0.0  # Add spending calculation
+    weekly_limit: Optional[float] = None  # For frontend compatibility
 
     class Config:
         from_attributes = True
 
+# ==================== Helper Functions ====================
+def calculate_monthly_spending_for_category(user_id: int, category_name: str, db: Session) -> float:
+    """Calculate total spending for a category in the current month."""
+    try:
+        # Calculate first day of current month
+        now = datetime.now()
+        first_day_of_month = datetime(now.year, now.month, 1).date()
+        
+        # Find the category ID
+        category = db.query(User_Categories).filter(
+            User_Categories.user_id == user_id,
+            User_Categories.name == category_name
+        ).first()
+        
+        if not category:
+            return 0.0
+        
+        # Get Plaid transactions for this category (current month)
+        plaid_transactions = db.query(
+            Plaid_Transactions.amount
+        ).join(
+            Plaid_Bank_Account, 
+            Plaid_Transactions.account_id == Plaid_Bank_Account.account_id
+        ).join(
+            Transaction_Category_Link,
+            Plaid_Transactions.transaction_id == Transaction_Category_Link.transaction_id
+        ).filter(
+            Plaid_Bank_Account.user_id == user_id,
+            Transaction_Category_Link.category_id == category.id,
+            Plaid_Transactions.date >= first_day_of_month
+        ).all()
+        
+        # Get User transactions for this category (current month)
+        user_transactions = db.query(
+            User_Transactions.amount
+        ).join(
+            User_Transaction_Category_Link,
+            User_Transactions.transaction_id == User_Transaction_Category_Link.transaction_id
+        ).filter(
+            User_Transactions.user_id == user_id,
+            User_Transaction_Category_Link.category_id == category.id,
+            User_Transactions.date >= first_day_of_month
+        ).all()
+        
+        # Calculate total spending (use absolute value for expenses)
+        plaid_total = sum(abs(transaction.amount) for transaction in plaid_transactions if transaction.amount)
+        user_total = sum(abs(transaction.amount) for transaction in user_transactions if transaction.amount)
+        
+        return plaid_total + user_total
+        
+    except Exception as e:
+        return 0.0
+
 # ==================== Routes ====================
-
-
-from models import User_Categories
 
 @router.get("/", response_model=List[BudgetGoalResponse])
 async def get_budget_goals(user: Annotated[dict, Depends(get_current_user)], 
@@ -70,15 +122,30 @@ async def get_budget_goals(user: Annotated[dict, Depends(get_current_user)],
         goal_map = {g.category_name: g for g in goals}
         result = []
         for cat in categories:
+            # Calculate monthly spending for this category
+            spent_this_month = calculate_monthly_spending_for_category(user["id"], cat.name, db)
+            
             g = goal_map.get(cat.name)
             if g:
-                # Use the actual goal
-                result.append(g)
+                # Use the actual goal and add spending data
+                goal_response = BudgetGoalResponse(
+                    id=g.id,
+                    goal_type=g.goal_type,
+                    goal_name=g.goal_name,
+                    goal_amount=g.goal_amount,
+                    time_period=g.time_period,
+                    category_name=g.category_name,
+                    created_at=g.created_at,
+                    updated_at=g.updated_at,
+                    is_active=g.is_active,
+                    spent_this_month=spent_this_month,
+                    weekly_limit=g.goal_amount  # Map goal_amount to weekly_limit for frontend compatibility
+                )
+                result.append(goal_response)
             else:
                 # Return a default goal object for categories with no goal
-                result.append(Budget_Goals(
+                goal_response = BudgetGoalResponse(
                     id=-cat.id,  # negative id to avoid collision
-                    user_id=user["id"],
                     goal_type="category",
                     goal_name=f"{cat.name} Budget",
                     goal_amount=0.0,
@@ -86,15 +153,41 @@ async def get_budget_goals(user: Annotated[dict, Depends(get_current_user)],
                     category_name=cat.name,
                     created_at=cat.created_at if hasattr(cat, 'created_at') else datetime.utcnow(),
                     updated_at=cat.created_at if hasattr(cat, 'created_at') else datetime.utcnow(),
-                    is_active=True
-                ))
+                    is_active=True,
+                    spent_this_month=spent_this_month,
+                    weekly_limit=0.0  # Default for categories with no goal
+                )
+                result.append(goal_response)
         return result
     else:
         query = db.query(Budget_Goals).filter(Budget_Goals.user_id == user["id"], Budget_Goals.is_active == True)
         if goal_type:
             query = query.filter(Budget_Goals.goal_type == goal_type)
         goals = query.all()
-        return goals
+        
+        # For non-category goals, add spending calculation if needed
+        result = []
+        for goal in goals:
+            spent_amount = 0.0
+            if goal.goal_type == "category" and goal.category_name:
+                spent_amount = calculate_monthly_spending_for_category(user["id"], goal.category_name, db)
+            
+            goal_response = BudgetGoalResponse(
+                id=goal.id,
+                goal_type=goal.goal_type,
+                goal_name=goal.goal_name,
+                goal_amount=goal.goal_amount,
+                time_period=goal.time_period,
+                category_name=goal.category_name,
+                created_at=goal.created_at,
+                updated_at=goal.updated_at,
+                is_active=goal.is_active,
+                spent_this_month=spent_amount,
+                weekly_limit=goal.goal_amount  # Map goal_amount to weekly_limit for frontend compatibility
+            )
+            result.append(goal_response)
+        
+        return result
 
 @router.post("/", status_code=status.HTTP_201_CREATED, response_model=BudgetGoalResponse)
 async def create_budget_goal(user: Annotated[dict, Depends(get_current_user)], 
@@ -202,6 +295,19 @@ async def delete_budget_goal(goal_id: int,
     goal.updated_at = datetime.utcnow()
     
     db.commit()
+
+@router.get("/spending-summary")
+async def get_spending_summary(user: Annotated[dict, Depends(get_current_user)], 
+                              db: db_dependency):
+    """Get monthly spending summary by category for the current user."""
+    categories = db.query(User_Categories).filter(User_Categories.user_id == user["id"]).all()
+    spending_summary = {}
+    
+    for category in categories:
+        spent_amount = calculate_monthly_spending_for_category(user["id"], category.name, db)
+        spending_summary[category.name] = spent_amount
+    
+    return spending_summary
 
 @router.post("/initialize_defaults", status_code=status.HTTP_201_CREATED)
 async def initialize_default_categories(user: Annotated[dict, Depends(get_current_user)], 
