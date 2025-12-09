@@ -2,35 +2,29 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import Annotated, List, Optional
+from pathlib import Path
+from datetime import datetime
+import os, uuid, shutil
+
 from database import SessionLocal
 from models import Algorithm_Listing, Users, Algorithm_Purchase, Algorithm_Review
 from auth import get_current_user
 from pydantic import BaseModel
-from datetime import datetime
-from sqlalchemy import func, or_, and_
-from sqlalchemy.sql import text
-import os
-import uuid
-import shutil
-from pathlib import Path
-import stripe
-from dotenv import load_dotenv
 
-load_dotenv()
+# ==========================================================
+#   Router Setup
+# ==========================================================
 
-# Initialize Stripe
-stripe.api_key = os.getenv("STRIPE_KEY")
+router = APIRouter(prefix="/algorithms", tags=["algorithms"])
 
-router = APIRouter(
-    prefix='/algorithms',
-    tags=['algorithms']
-)
-
-# Directory for storing algorithm files
+# Directory to store uploads
 ALGORITHMS_DIR = Path("back_end/uploaded_algorithms")
 ALGORITHMS_DIR.mkdir(parents=True, exist_ok=True)
 
-# ==================== Dependencies ====================
+# ==========================================================
+#   Dependencies
+# ==========================================================
+
 def get_db():
     db = SessionLocal()
     try:
@@ -41,7 +35,10 @@ def get_db():
 db_dependency = Annotated[Session, Depends(get_db)]
 user_dependency = Annotated[dict, Depends(get_current_user)]
 
-# ==================== Schemas ====================
+# ==========================================================
+#   Schemas
+# ==========================================================
+
 class AlgorithmListingCreate(BaseModel):
     title: str
     description: Optional[str] = None
@@ -49,25 +46,6 @@ class AlgorithmListingCreate(BaseModel):
     price: Optional[float] = None
     version: Optional[str] = "1.0.0"
 
-class AlgorithmListingResponse(BaseModel):
-    id: int
-    user_id: int
-    title: str
-    description: Optional[str]
-    category: Optional[str]
-    price: Optional[float]
-    file_name: Optional[str]
-    file_size: Optional[int]
-    version: str
-    is_active: bool
-    download_count: int
-    rating: Optional[float]
-    created_at: datetime
-    updated_at: datetime
-    author_username: str
-
-    class Config:
-        from_attributes = True
 
 class AlgorithmListingUpdate(BaseModel):
     title: Optional[str] = None
@@ -243,40 +221,107 @@ def create_algorithm_listing(user: dict, db: Session, listing_data: AlgorithmLis
         version=listing_data.version or "1.0.0",
         approval_status="pending"  # New listings require approval
     )
-    
     db.add(listing)
     db.commit()
     db.refresh(listing)
-    
     return listing
 
-def upload_algorithm_file(listing_id: int, user: dict, db: Session, file: UploadFile):
-    """Upload and store algorithm file for a listing."""
+
+# ==========================================================
+#   ROUTES (ORDER MATTERS!)
+# ==========================================================
+
+# --------- 1. List all algorithms (INTERNAL) ----------
+@router.get("/", status_code=200)
+async def list_algorithms(skip: int = 0, limit: int = 100, db: db_dependency = None):
+    return db.query(Algorithm_Listing).offset(skip).limit(limit).all()
+
+
+# --------- 2. Marketplace (PUBLIC) ----------
+@router.get("/marketplace", status_code=200)
+async def marketplace_listing(
+    page: int = 1,
+    limit: int = 9,
+    search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    db: db_dependency = None
+):
+    """Paginated + searchable marketplace listing"""
+
+    query = db.query(Algorithm_Listing).filter(Algorithm_Listing.is_active == True)
+
+    # Search
+    if search:
+        query = query.filter(Algorithm_Listing.title.ilike(f"%{search}%"))
+
+    # Sort
+    if sort_by == "new":
+        query = query.order_by(Algorithm_Listing.created_at.desc())
+    elif sort_by == "price_low":
+        query = query.order_by(Algorithm_Listing.price.asc())
+    elif sort_by == "price_high":
+        query = query.order_by(Algorithm_Listing.price.desc())
+    elif sort_by == "rating":
+        query = query.order_by(Algorithm_Listing.rating.desc())
+    else:
+        # Default sort by popularity
+        query = query.order_by(Algorithm_Listing.download_count.desc())
+
+    total_count = query.count()
+    total_pages = max((total_count + limit - 1) // limit, 1)
+
+    listings = query.offset((page - 1) * limit).limit(limit).all()
+
+    return {
+        "items": [
+            {
+                "id": item.id,
+                "name": item.title,
+                "description": item.description,
+                "creator": db.query(Users).filter(Users.id == item.user_id).first().username,
+                "tags": item.category.split(",") if item.category else [],
+                "price": item.price,
+                "rating": item.rating,
+                "num_reviews": 0,
+                "updated_at": item.updated_at,
+            }
+            for item in listings
+        ],
+        "total_pages": total_pages
+    }
+
+
+# --------- 3. Create new algorithm listing ----------
+@router.post("/", status_code=201)
+async def create_listing(listing_data: AlgorithmListingCreate, user: user_dependency, db: db_dependency):
+    listing = create_algorithm_listing(user, db, listing_data)
+    return {"message": "Listing created", "listing_id": listing.id}
+
+
+# --------- 4. Upload a file to a listing (OWNER ONLY) ----------
+@router.post("/{listing_id}/upload", status_code=200)
+async def upload_algorithm(listing_id: int, file: UploadFile = File(...), user: user_dependency = None, db: db_dependency = None):
+
     listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
-    
     if not listing:
-        raise HTTPException(status_code=404, detail="Algorithm listing not found")
-    
-    # Verify ownership
+        raise HTTPException(404, "Listing not found")
+
     if listing.user_id != user["id"]:
-        raise HTTPException(status_code=403, detail="Not authorized to upload to this listing")
-    
-    # Generate unique filename to avoid conflicts
-    file_extension = Path(file.filename).suffix if file.filename else ""
-    unique_filename = f"{listing_id}_{uuid.uuid4().hex}{file_extension}"
-    file_path = ALGORITHMS_DIR / unique_filename
-    
-    # Save file
+        raise HTTPException(403, "Not authorized")
+
+    ext = Path(file.filename).suffix
+    unique_name = f"{listing_id}_{uuid.uuid4().hex}{ext}"
+    path = ALGORITHMS_DIR / unique_name
+
     try:
-        with open(file_path, "wb") as buffer:
+        with open(path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
-        # Update listing with file information
-        listing.file_path = str(file_path)
+
+        listing.file_path = str(path)
         listing.file_name = file.filename
-        listing.file_size = file_path.stat().st_size
+        listing.file_size = path.stat().st_size
         listing.updated_at = datetime.utcnow()
-        
+
         db.commit()
         db.refresh(listing)
         
@@ -355,7 +400,6 @@ async def get_algorithm(
 ):
     """Get a specific algorithm listing by ID. Increments view count."""
     listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
-    
     if not listing:
         raise HTTPException(status_code=404, detail="Algorithm listing not found")
     
@@ -440,11 +484,9 @@ async def update_listing(
 ):
     """Update an algorithm listing (only by owner)."""
     listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
-    
+
     if not listing:
-        raise HTTPException(status_code=404, detail="Algorithm listing not found")
-    
-    # Verify ownership
+        raise HTTPException(404, "Listing not found")
     if listing.user_id != user["id"]:
         raise HTTPException(status_code=403, detail="Not authorized to update this listing")
     
@@ -479,39 +521,24 @@ async def update_listing(
         listing.rejection_reason = None
     
     listing.updated_at = datetime.utcnow()
-    
     db.commit()
-    db.refresh(listing)
-    
-    return {
-        "message": "Algorithm listing updated successfully",
-        "listing_id": listing.id
-    }
 
-@router.delete("/{listing_id}", status_code=status.HTTP_200_OK)
-async def delete_listing(
-    listing_id: int,
-    user: user_dependency = None,
-    db: db_dependency = None
-):
-    """Delete an algorithm listing (only by owner)."""
+    return {"message": "Listing updated"}
+
+
+# --------- 8. Delete listing ----------
+@router.delete("/{listing_id}", status_code=200)
+async def delete_listing(listing_id: int, user: user_dependency, db: db_dependency):
     listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
-    
+
     if not listing:
-        raise HTTPException(status_code=404, detail="Algorithm listing not found")
-    
-    # Verify ownership
+        raise HTTPException(404, "Listing not found")
     if listing.user_id != user["id"]:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this listing")
-    
-    # Delete associated file if it exists
+        raise HTTPException(403, "Unauthorized")
+
     if listing.file_path and os.path.exists(listing.file_path):
-        try:
-            os.remove(listing.file_path)
-        except Exception as e:
-            # Log error but continue with database deletion
-            print(f"Error deleting file {listing.file_path}: {e}")
-    
+        os.remove(listing.file_path)
+
     db.delete(listing)
     db.commit()
     

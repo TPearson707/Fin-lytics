@@ -7,6 +7,10 @@ import Portfolio from "./portfolio/portfolio";
 import Stock from "./stock/stock";
 import "../styles/pages/dashboard/dashboard.scss";
 import StockInsights from "./stock/StockInsights";
+import Marketplace from "./marketplace/Marketplace";
+import AlgorithmDetails from "./marketplace/AlgorithmDetails";
+import CreateListing from "./marketplace/CreateListing";
+import EditListing from "./marketplace/EditListing";
 
 const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
   return (
@@ -20,7 +24,16 @@ const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
             <Route path="/budget" element={<Budget/>} />
             <Route path="/stock" element={<Stock />} />
             <Route path="/stock/:ticker" element={<StockInsights />} />
+            <Route path="/marketplace" element={<Marketplace />} />
+
+            {/* FIX: put this BEFORE the dynamic route */}
+            <Route path="/marketplace/create" element={<CreateListing />} />
+            <Route path="/marketplace/edit/:id" element={<EditListing />} />
+
+            {/* Dynamic route always last */}
+            <Route path="/marketplace/:id" element={<AlgorithmDetails />} />
           </Routes>
+
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ import {
 } from "@mui/icons-material";
 import { styled } from "@mui/system";
 import axios from "axios";
+import StorefrontIcon from '@mui/icons-material/Storefront';
 
 const StyledListItem = styled(({ button, ...otherProps }) => {
   const { component: Component = "div", ...rest } = otherProps;
@@ -127,6 +128,14 @@ const Sidebar = ({ setIsAuthenticated }) => {
                 primary={<Typography sx={{ fontSize: "1rem" }}>Stock AI</Typography>}
               />
             </StyledListItem>
+            <StyledListItem button component={Link} to="/marketplace">
+            <ListItemIcon sx={{ color: "white", minWidth: 40 }}>
+              <StorefrontIcon />
+            </ListItemIcon>
+            <ListItemText
+              primary={<Typography sx={{ fontSize: "1rem" }}>Marketplace</Typography>}
+            />
+          </StyledListItem>
             <StyledListItem button component={Link} to="/Budget">
               <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
                 <AccountBalanceIcon />
