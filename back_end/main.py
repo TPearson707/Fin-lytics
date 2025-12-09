@@ -19,6 +19,7 @@ import entered_transactions
 import balance_routes
 import stripe_routes
 import algorithm_marketplace_routes
+import admin_routes
 from startup import initialize_prediction_service, cleanup_prediction_service
 
 @asynccontextmanager
@@ -59,6 +60,7 @@ app.include_router(entered_transactions.router)
 app.include_router(balance_routes.router)
 app.include_router(stripe_routes.router)
 app.include_router(algorithm_marketplace_routes.router)
+app.include_router(admin_routes.router)
 
 
 # Create MySQL tables (make sure this is called at least once)

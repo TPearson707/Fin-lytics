@@ -19,6 +19,9 @@ class Users(Base):
     verification_token = Column(String(255), nullable=True)
     subscription_status = Column(String(50), default="inactive")  # active, inactive, canceled, past_due
     subscription_id = Column(String(255), nullable=True)
+    is_admin = Column(Boolean, default=False)  # Admin role for marketplace management
+    is_seller = Column(Boolean, default=False)  # Seller role for creating listings
+    seller_verified = Column(Boolean, default=False)  # Seller verification status
     bank_accounts = relationship(
         "Plaid_Bank_Account",
         back_populates="user",
@@ -292,12 +295,63 @@ class Algorithm_Listing(Base):
     file_size = Column(Integer, nullable=True)  # File size in bytes
     version = Column(String(50), default="1.0.0")
     is_active = Column(Boolean, default=True)
+    approval_status = Column(String(50), default="pending")  # pending, approved, rejected
+    approved_by = Column(Integer, ForeignKey("Users.id", ondelete="SET NULL"), nullable=True)
+    approved_at = Column(DateTime, nullable=True)
+    rejection_reason = Column(Text, nullable=True)  # Reason for rejection if rejected
     download_count = Column(Integer, default=0)
     rating = Column(Float, nullable=True)  # Average rating
+    view_count = Column(Integer, default=0)  # Number of times listing was viewed
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
-    user = relationship("Users", backref="algorithm_listings")
+    user = relationship("Users", backref="algorithm_listings", foreign_keys=[user_id])
+    approver = relationship("Users", foreign_keys=[approved_by])
+    purchases = relationship("Algorithm_Purchase", back_populates="listing", cascade="all, delete-orphan")
+    reviews = relationship("Algorithm_Review", back_populates="listing", cascade="all, delete-orphan")
+
+
+class Algorithm_Purchase(Base):
+    __tablename__ = "Algorithm_Purchases"
+
+    id = Column(Integer, primary_key=True, index=True)
+    buyer_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
+    listing_id = Column(Integer, ForeignKey("Algorithm_Listings.id", ondelete="CASCADE"), nullable=False)
+    purchase_price = Column(Float, nullable=True)  # Price at time of purchase
+    purchase_date = Column(DateTime, default=datetime.utcnow)
+    download_count = Column(Integer, default=0)  # How many times this buyer downloaded
+    payment_status = Column(String(50), default="pending")  # pending, processing, completed, failed, refunded
+    stripe_payment_intent_id = Column(String(255), nullable=True)  # Stripe PaymentIntent ID
+    stripe_checkout_session_id = Column(String(255), nullable=True)  # Stripe Checkout Session ID
+    refund_status = Column(String(50), nullable=True)  # None, requested, approved, rejected, completed
+    refund_reason = Column(Text, nullable=True)
+    refunded_at = Column(DateTime, nullable=True)
+    
+    buyer = relationship("Users", backref="algorithm_purchases")
+    listing = relationship("Algorithm_Listing", back_populates="purchases")
+    
+    __table_args__ = (
+        UniqueConstraint('buyer_id', 'listing_id', name='_buyer_listing_uc'),
+    )
+
+
+class Algorithm_Review(Base):
+    __tablename__ = "Algorithm_Reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+    listing_id = Column(Integer, ForeignKey("Algorithm_Listings.id", ondelete="CASCADE"), nullable=False)
+    reviewer_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), nullable=False)
+    rating = Column(Integer, nullable=False)  # 1-5 stars
+    comment = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    listing = relationship("Algorithm_Listing", back_populates="reviews")
+    reviewer = relationship("Users", backref="algorithm_reviews")
+    
+    __table_args__ = (
+        UniqueConstraint('listing_id', 'reviewer_id', name='_listing_reviewer_uc'),
+    )
 
 
 
