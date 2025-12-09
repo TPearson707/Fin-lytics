@@ -5,11 +5,18 @@ from typing import Annotated, List, Optional
 from pathlib import Path
 from datetime import datetime
 import os, uuid, shutil
+import stripe
+from dotenv import load_dotenv
 
 from database import SessionLocal
 from models import Algorithm_Listing, Users, Algorithm_Purchase, Algorithm_Review
 from auth import get_current_user
 from pydantic import BaseModel
+
+load_dotenv()
+
+# Initialize Stripe
+stripe.api_key = os.getenv("STRIPE_KEY")
 
 # ==========================================================
 #   Router Setup
@@ -991,84 +998,130 @@ async def request_seller_access(
         "seller_verified": False
     }
 
-@router.post("/webhook/stripe", status_code=status.HTTP_200_OK)
-async def stripe_webhook(
-    request: Request,
-    stripe_signature: str = Header(None, alias="stripe-signature")
+@router.post("/payment/check-status", status_code=status.HTTP_200_OK)
+async def check_payment_status(
+    session_id: Optional[str] = Query(None),
+    payment_intent_id: Optional[str] = Query(None),
+    user: user_dependency = None,
+    db: db_dependency = None
 ):
-    """Handle Stripe webhook events for algorithm purchases."""
-    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+    """Check and update payment status by querying Stripe directly (no webhooks needed)."""
+    if not stripe.api_key:
+        raise HTTPException(status_code=500, detail="Payment processing not configured")
     
-    if not webhook_secret:
-        raise HTTPException(status_code=500, detail="Webhook secret not configured")
+    if not session_id and not payment_intent_id:
+        raise HTTPException(
+            status_code=400, 
+            detail="Either session_id or payment_intent_id must be provided"
+        )
     
-    if not stripe_signature:
-        raise HTTPException(status_code=400, detail="Missing stripe-signature header")
-    
-    db = SessionLocal()
     try:
-        # Get raw body as bytes (important for signature verification)
-        body = await request.body()
+        purchase = None
         
-        # Verify webhook signature
-        try:
-            event = stripe.Webhook.construct_event(
-                body,
-                stripe_signature,
-                webhook_secret
-            )
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid payload: {str(e)}")
-        except stripe.error.SignatureVerificationError as e:
-            raise HTTPException(status_code=400, detail=f"Invalid signature: {str(e)}")
-        
-        # Handle the event
-        event_type = event["type"]
-        data = event["data"]["object"]
-        
-        if event_type == "checkout.session.completed":
-            session = data
-            session_id = session.get("id")
-            
-            # Find the purchase record
+        # If session_id provided, check checkout session
+        if session_id:
+            # Find purchase record
             purchase = db.query(Algorithm_Purchase).filter(
                 Algorithm_Purchase.stripe_checkout_session_id == session_id
             ).first()
             
-            if purchase and session.get("payment_status") == "paid":
+            if not purchase:
+                raise HTTPException(status_code=404, detail="Purchase record not found")
+            
+            # Verify it belongs to the user (if authenticated)
+            if user and purchase.buyer_id != user["id"]:
+                raise HTTPException(status_code=403, detail="This purchase does not belong to you")
+            
+            # Retrieve session from Stripe
+            session = stripe.checkout.Session.retrieve(session_id)
+            
+            # Update purchase status based on Stripe session status
+            if session.payment_status == "paid":
                 purchase.payment_status = "completed"
-                purchase.stripe_payment_intent_id = session.get("payment_intent")
+                if session.payment_intent:
+                    purchase.stripe_payment_intent_id = session.payment_intent
                 db.commit()
-        
-        elif event_type == "payment_intent.succeeded":
-            payment_intent = data
-            payment_intent_id = payment_intent.get("id")
-            
-            # Find purchase by payment intent
-            purchase = db.query(Algorithm_Purchase).filter(
-                Algorithm_Purchase.stripe_payment_intent_id == payment_intent_id
-            ).first()
-            
-            if purchase:
-                purchase.payment_status = "completed"
+                return {
+                    "status": "success",
+                    "payment_status": "completed",
+                    "purchase_id": purchase.id,
+                    "message": "Payment completed successfully"
+                }
+            elif session.payment_status == "unpaid":
+                purchase.payment_status = "pending"
                 db.commit()
-        
-        elif event_type == "payment_intent.payment_failed":
-            payment_intent = data
-            payment_intent_id = payment_intent.get("id")
-            
-            # Find purchase by payment intent
-            purchase = db.query(Algorithm_Purchase).filter(
-                Algorithm_Purchase.stripe_payment_intent_id == payment_intent_id
-            ).first()
-            
-            if purchase:
+                return {
+                    "status": "pending",
+                    "payment_status": "pending",
+                    "purchase_id": purchase.id,
+                    "message": "Payment is still pending"
+                }
+            else:
                 purchase.payment_status = "failed"
                 db.commit()
+                return {
+                    "status": "failed",
+                    "payment_status": session.payment_status,
+                    "purchase_id": purchase.id,
+                    "message": f"Payment status: {session.payment_status}"
+                }
         
-        return {"status": "success"}
+        # If payment_intent_id provided, check payment intent
+        elif payment_intent_id:
+            # Find purchase record
+            purchase = db.query(Algorithm_Purchase).filter(
+                Algorithm_Purchase.stripe_payment_intent_id == payment_intent_id
+            ).first()
+            
+            if not purchase:
+                raise HTTPException(status_code=404, detail="Purchase record not found")
+            
+            # Verify it belongs to the user (if authenticated)
+            if user and purchase.buyer_id != user["id"]:
+                raise HTTPException(status_code=403, detail="This purchase does not belong to you")
+            
+            # Retrieve payment intent from Stripe
+            payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+            
+            # Update purchase status based on Stripe payment intent status
+            if payment_intent.status == "succeeded":
+                purchase.payment_status = "completed"
+                db.commit()
+                return {
+                    "status": "success",
+                    "payment_status": "completed",
+                    "purchase_id": purchase.id,
+                    "message": "Payment completed successfully"
+                }
+            elif payment_intent.status == "processing":
+                purchase.payment_status = "processing"
+                db.commit()
+                return {
+                    "status": "processing",
+                    "payment_status": "processing",
+                    "purchase_id": purchase.id,
+                    "message": "Payment is being processed"
+                }
+            elif payment_intent.status == "requires_payment_method":
+                purchase.payment_status = "failed"
+                db.commit()
+                return {
+                    "status": "failed",
+                    "payment_status": "failed",
+                    "purchase_id": purchase.id,
+                    "message": "Payment requires a payment method"
+                }
+            else:
+                purchase.payment_status = "failed"
+                db.commit()
+                return {
+                    "status": "failed",
+                    "payment_status": payment_intent.status,
+                    "purchase_id": purchase.id,
+                    "message": f"Payment status: {payment_intent.status}"
+                }
         
+    except stripe.error.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Stripe error: {str(e)}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Webhook processing failed: {str(e)}")
-    finally:
-        db.close()
+        raise HTTPException(status_code=500, detail=f"Failed to check payment status: {str(e)}")
