@@ -1,18 +1,16 @@
-import { Routes, Route } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "../components/common/Sidebar";
 import DbNavbar from "../components/common/commonNavBar";
-import "./Dashboard.scss";
 import Budget from "./budget/budget";
-import Overview from "./overview/Overview";
 import Stock from "./stock/stock";
+import "../styles/pages/dashboard/dashboard.scss";
 import StockInsights from "./stock/StockInsights";
-import Plans from "./subscription/pages/Plans";
-import Success from "./subscription/pages/Success";
 import Marketplace from "./marketplace/Marketplace";
 import AlgorithmDetails from "./marketplace/AlgorithmDetails";
 import CreateListing from "./marketplace/CreateListing";
 import EditListing from "./marketplace/EditListing";
-
+import Overview from "./overview/Overview";
 // --- ADMIN IMPORTS ---
 import AdminDashboard from "./admin/AdminDashboard";
 import PendingApprovals from "./admin/PendingApprovals";
@@ -56,23 +54,18 @@ const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
       />
 
       <div className="main-content">
-        {/* Permanent sidebar */}
         <Sidebar setIsAuthenticated={setIsAuthenticated} />
 
-        {/* Main content area */}
         <div className="content-area">
           <Routes>
+            {/* ---- NORMAL USER ROUTES ---- */}
             <Route path="/" element={<Overview />} />
             <Route path="/budget" element={<Budget />} />
             <Route path="/stock" element={<Stock />} />
             <Route path="/stock/:ticker" element={<StockInsights />} />
 
-            {/* Subscription flow */}
-            <Route path="/plans">
-              <Route index element={<Plans />} /> {/* /dashboard/plans */}
-              <Route path="success" element={<Success />} />
-            </Route>
-            <Route path="/marketplace" element={<Marketplace />} />
+             {/* Subscription flow */}
+           
 
             {/* ---- MARKETPLACE ---- */}
             <Route path="/marketplace" element={<Marketplace />} />
@@ -86,9 +79,6 @@ const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
             {isAdmin && (
               <>
                 <Route path="/admin" element={<AdminLayout />} />
-                {/* <Route path="/admin/approvals" element={<PendingApprovals />} />
-                <Route path="/admin/listings" element={<ManageListings />} />
-                <Route path="/admin/sellers" element={<ManageSellers />} /> */}
               </>
             )}
 

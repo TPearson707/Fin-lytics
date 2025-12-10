@@ -31,6 +31,7 @@
     "react-hot-toast": "^2.6.0",
     "react-plaid-link": "^3.6.1",
     "react-router-dom": "^7.1.5",
+    "react-slick": "^0.31.0",
     "recharts": "^3.5.1",
     "sass": "^1.68.0",
     "slick-carousel": "^1.8.1",
