@@ -91,8 +91,9 @@ const About = () => {
 
     return (
         <Box 
+            className="about-page"
             sx={{ 
-                background: '#fff',
+                background: 'linear-gradient(120deg, #f7faf8 0%, #e4ede5 100%)', // subtle light green gradient
                 minHeight: '100vh',
                 py: 4,
                 backgroundAttachment: 'fixed',
@@ -121,15 +122,15 @@ const About = () => {
             </Box>
 
             <Card 
-                elevation={3} 
+                elevation={8}
                 sx={{ 
                     mb: 6,
-                    borderRadius: 3,
-                    background: '#fff',
-                    backdropFilter: 'none',
-                    border: 'none',
-                    transition: 'none',
-                    boxShadow: 'none',
+                    borderRadius: 4,
+                    background: 'rgba(255,255,255,0.95)',
+                    boxShadow: '0 8px 32px rgba(31, 38, 135, 0.10)',
+                    backdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    transition: 'box-shadow 0.3s',
                 }}
             >
                 <CardContent sx={{ p: 4 }}>
@@ -159,226 +160,250 @@ const About = () => {
                                     { developer: developers[currentDeveloper], index: currentDeveloper, position: 'center' },
                                     { developer: developers[nextIndex], index: nextIndex, position: 'next' }
                                 ];
-
-                                return visibleCards.map(({ developer, index, position }, cardIndex) => {
-                                    const isCenter = position === 'center';
-                                    const cardSlideDirection = position === 'prev' ? -1 : position === 'next' ? 1 : 0;
-                                    
-                                    return (
-                                        <Card
-                                            key={`${index}-${position}`}
-                                            elevation={isCenter ? 12 : 4}
-                                            sx={{
-                                                flex: '0 0 280px',
-                                                height: isCenter ? '320px' : '280px',
-                                                borderRadius: 4,
-                                                background: '#fff',
-                                                border: 'none',
-                                                transition: 'none',
-                                                transform: `scale(1) translateX(0px) translateY(0px) rotateY(0deg)`,
-                                                opacity: 1,
-                                                cursor: 'pointer',
-                                                overflow: 'visible',
-                                                boxShadow: 'none',
-                                                zIndex: isCenter ? 10 : 5,
-                                                transformStyle: 'preserve-3d',
-                                            }}
-                                            onClick={() => {
-                                                if (!isCenter) {
-                                                    const direction = position === 'prev' ? -1 : 1;
-                                                    setSlideDirection(direction);
-                                                    setFadeIn(false);
-                                                    setTimeout(() => {
-                                                        setCurrentDeveloper(index);
-                                                        setFadeIn(true);
-                                                    }, 200);
-                                                    setTimeout(() => setSlideDirection(0), 700);
-                                                }
-                                            }}
-                                        >
-                                        <CardContent sx={{ 
-                                            textAlign: 'center', 
-                                            p: isCenter ? 3 : 2.5,
-                                            height: '100%',
-                                            display: 'flex',
-                                            flexDirection: 'column',
-                                            gap: isCenter ? 2 : 1.5
-                                        }}>
-                                            <Box sx={{ 
-                                                opacity: fadeIn ? 1 : 0.8,
-                                                transform: fadeIn ? 'translateY(0)' : 'translateY(10px)',
-                                                transition: `all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardIndex * 0.1}s`
-                                            }}>
-                                                <Typography 
-                                                    variant={isCenter ? "h5" : "h6"} 
-                                                    gutterBottom 
-                                                    sx={{ 
-                                                        fontWeight: 600, 
-                                                        color: isCenter ? '#749181' : '#666',
-                                                        minHeight: isCenter ? '40px' : '32px',
-                                                        fontSize: isCenter ? '1.5rem' : '1.1rem',
-                                                        mb: 0.5
-                                                    }}
-                                                >
-                                                    {developer.name}
-                                                </Typography>
-                                                <Typography 
-                                                    variant="caption"
+                                return (
+                                    <>
+                                        {visibleCards.map(({ developer, index, position }, cardIndex) => {
+                                            const isCenter = position === 'center';
+                                            const cardSlideDirection = position === 'prev' ? -1 : position === 'next' ? 1 : 0;
+                                            return (
+                                                <Box
+                                                    key={`bg-${index}-${position}`}
                                                     sx={{
-                                                        color: '#888',
-                                                        fontSize: isCenter ? '0.85rem' : '0.75rem',
-                                                        mb: 1.2,
-                                                        display: 'block',
-                                                        lineHeight: 1
+                                                        position: 'relative',
+                                                        flex: '0 0 280px',
+                                                        height: isCenter ? '320px' : '280px',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
                                                     }}
                                                 >
-                                                    Graduates: {developer.grad}
-                                                </Typography>
-                                                
-                                                <Chip 
-                                                    label={developer.role}
-                                                    size={isCenter ? "medium" : "small"}
-                                                    sx={{ 
-                                                        backgroundColor: isCenter ? 'rgba(116, 145, 129, 0.9)' : 'rgba(116, 145, 129, 0.15)', 
-                                                        color: isCenter ? 'white' : '#749181',
-                                                        fontWeight: 500,
-                                                        fontSize: isCenter ? '0.875rem' : '0.75rem'
-                                                    }}
-                                                />
-                                            </Box>
-                                            
-                                            <Box sx={{ 
-                                                opacity: fadeIn ? 1 : 0.6,
-                                                transform: fadeIn ? 'translateY(0)' : 'translateY(15px)',
-                                                transition: `all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardIndex * 0.15}s`
-                                            }}>
-                                                <Typography 
-                                                    variant={isCenter ? "body2" : "caption"} 
-                                                    sx={{ 
-                                                        lineHeight: isCenter ? 1.6 : 1.5, 
-                                                        color: isCenter ? '#333' : '#666',
-                                                        fontSize: isCenter ? '0.875rem' : '0.75rem',
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: isCenter ? 5 : 4,
-                                                        WebkitBoxOrient: 'vertical',
-                                                        overflow: 'hidden',
-                                                        textOverflow: 'ellipsis'
-                                                    }}
-                                                >
-                                                    {isCenter ? developer.bio : developer.bio.length > 80 ? `${developer.bio.substring(0, 80)}...` : developer.bio}
-                                                </Typography>
-                                            </Box>
-                                            
-                                            {isCenter && (
-                                                <Box sx={{ 
-                                                    display: 'flex',
-                                                    justifyContent: 'center',
-                                                    gap: 2,
-                                                    opacity: fadeIn ? 1 : 0.4,
-                                                    transform: fadeIn ? 'translateY(0)' : 'translateY(10px)',
-                                                    transition: 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s'
-                                                }}>
                                                     <Box
-                                                        component="a"
-                                                        href={developer.linkedin}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        sx={{ 
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            textDecoration: 'none'
+                                                        sx={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            borderRadius: 4,
+                                                            boxShadow: isCenter ? '0 8px 32px rgba(31, 38, 135, 0.10)' : '0 4px 16px rgba(31, 38, 135, 0.07)',
+                                                            border: '1px solid rgba(255,255,255,0.18)',
+                                                            zIndex: 1,
+                                                        }}
+                                                    />
+                                                    <Card
+                                                        elevation={isCenter ? 12 : 4}
+                                                        sx={{
+                                                            flex: '1 1 auto',
+                                                            height: '100%',
+                                                            borderRadius: 4,
+                                                            background: 'rgba(255,255,255,0.97)',
+                                                            border: 'none',
+                                                            transition: 'none',
+                                                            transform: `scale(1) translateX(0px) translateY(0px) rotateY(0deg)`,
+                                                            opacity: 1,
+                                                            cursor: 'pointer',
+                                                            overflow: 'visible',
+                                                            boxShadow: 'none',
+                                                            zIndex: 2,
+                                                            transformStyle: 'preserve-3d',
+                                                        }}
+                                                        onClick={() => {
+                                                            if (!isCenter) {
+                                                                const direction = position === 'prev' ? -1 : 1;
+                                                                setSlideDirection(direction);
+                                                                setFadeIn(false);
+                                                                setTimeout(() => {
+                                                                    setCurrentDeveloper(index);
+                                                                    setFadeIn(true);
+                                                                }, 200);
+                                                                setTimeout(() => setSlideDirection(0), 700);
+                                                            }
                                                         }}
                                                     >
-                                                        <LinkedInIcon
-                                                            sx={{ 
-                                                                color: '#0077b5',
-                                                                fontSize: 26,
-                                                                cursor: 'pointer',
-                                                                '&:hover': { 
-                                                                    color: '#005885',
-                                                                    transform: 'scale(1.15)',
-                                                                    filter: 'drop-shadow(0 2px 8px rgba(0, 119, 181, 0.3))'
-                                                                },
-                                                                transition: 'all 0.3s ease'
-                                                            }}
-                                                        />
-                                                    </Box>
-                                                    <Box
-                                                        component="a"
-                                                        href={developer.github}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        sx={{ 
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            textDecoration: 'none'
-                                                        }}
-                                                    >
-                                                        <GitHubIcon
-                                                            sx={{ 
-                                                                color: '#23272f', // black/dark grey
-                                                                fontSize: 25,
-                                                                cursor: 'pointer',
-                                                                ml: 0.5,
-                                                                '&:hover': { 
-                                                                    color: '#444950', // lighter dark grey
-                                                                    transform: 'scale(1.15)',
-                                                                    filter: 'drop-shadow(0 2px 8px rgba(35, 39, 47, 0.18))'
-                                                                },
-                                                                transition: 'all 0.3s ease'
-                                                            }}
-                                                        />
-                                                    </Box>
-                                                    <Box
-                                                        component="a"
-                                                        href={`mailto:${developer.email}`}
-                                                        sx={{ 
-                                                            display: 'inline-flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            textDecoration: 'none'
-                                                        }}
-                                                    >
-                                                        <EmailIcon
-                                                            sx={{ 
-                                                                color: '#ffb300', // orange/yellow
-                                                                fontSize: 25,
-                                                                cursor: 'pointer',
-                                                                ml: 0.5,
-                                                                '&:hover': { 
-                                                                    color: '#ff8f00', // darker orange
-                                                                    transform: 'scale(1.15)',
-                                                                    filter: 'drop-shadow(0 2px 8px rgba(255, 179, 0, 0.3))'
-                                                                },
-                                                                transition: 'all 0.3s ease'
-                                                            }}
-                                                        />
-                                                    </Box>
+                                                        <CardContent sx={{ 
+                                                            textAlign: 'center', 
+                                                            p: isCenter ? 3 : 2.5,
+                                                            height: '100%',
+                                                            display: 'flex',
+                                                            flexDirection: 'column',
+                                                            gap: isCenter ? 2 : 1.5
+                                                        }}>
+                                                            {/* ...existing card content... */}
+                                                            <Box sx={{ 
+                                                                opacity: fadeIn ? 1 : 0.8,
+                                                                transform: fadeIn ? 'translateY(0)' : 'translateY(10px)',
+                                                                transition: `all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardIndex * 0.1}s`
+                                                            }}>
+                                                                <Typography 
+                                                                    variant={isCenter ? "h5" : "h6"} 
+                                                                    gutterBottom 
+                                                                    sx={{ 
+                                                                        fontWeight: 600, 
+                                                                        color: isCenter ? '#749181' : '#666',
+                                                                        minHeight: isCenter ? '40px' : '32px',
+                                                                        fontSize: isCenter ? '1.5rem' : '1.1rem',
+                                                                        mb: 0.5
+                                                                    }}
+                                                                >
+                                                                    {developer.name}
+                                                                </Typography>
+                                                                <Typography 
+                                                                    variant="caption"
+                                                                    sx={{
+                                                                        color: '#888',
+                                                                        fontSize: isCenter ? '0.85rem' : '0.75rem',
+                                                                        mb: 1.2,
+                                                                        display: 'block',
+                                                                        lineHeight: 1
+                                                                    }}
+                                                                >
+                                                                    Graduates: {developer.grad}
+                                                                </Typography>
+                                                                <Chip 
+                                                                    label={developer.role}
+                                                                    size={isCenter ? "medium" : "small"}
+                                                                    sx={{ 
+                                                                        backgroundColor: isCenter ? 'rgba(116, 145, 129, 0.9)' : 'rgba(116, 145, 129, 0.15)', 
+                                                                        color: isCenter ? 'white' : '#749181',
+                                                                        fontWeight: 500,
+                                                                        fontSize: isCenter ? '0.875rem' : '0.75rem'
+                                                                    }}
+                                                                />
+                                                            </Box>
+                                                            <Box sx={{ 
+                                                                opacity: fadeIn ? 1 : 0.6,
+                                                                transform: fadeIn ? 'translateY(0)' : 'translateY(15px)',
+                                                                transition: `all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardIndex * 0.15}s`
+                                                            }}>
+                                                                <Typography 
+                                                                    variant={isCenter ? "body2" : "caption"} 
+                                                                    sx={{ 
+                                                                        lineHeight: isCenter ? 1.6 : 1.5, 
+                                                                        color: isCenter ? '#333' : '#666',
+                                                                        fontSize: isCenter ? '0.875rem' : '0.75rem',
+                                                                        display: '-webkit-box',
+                                                                        WebkitLineClamp: isCenter ? 5 : 4,
+                                                                        WebkitBoxOrient: 'vertical',
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis'
+                                                                    }}
+                                                                >
+                                                                    {isCenter ? developer.bio : developer.bio.length > 80 ? `${developer.bio.substring(0, 80)}...` : developer.bio}
+                                                                </Typography>
+                                                            </Box>
+                                                            {isCenter && (
+                                                                <Box sx={{ 
+                                                                    display: 'flex',
+                                                                    justifyContent: 'center',
+                                                                    gap: 2,
+                                                                    opacity: fadeIn ? 1 : 0.4,
+                                                                    transform: fadeIn ? 'translateY(0)' : 'translateY(10px)',
+                                                                    transition: 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s'
+                                                                }}>
+                                                                    {/* ...existing icon buttons... */}
+                                                                    <Box
+                                                                        component="a"
+                                                                        href={developer.linkedin}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        sx={{ 
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            textDecoration: 'none'
+                                                                        }}
+                                                                    >
+                                                                        <LinkedInIcon
+                                                                            sx={{ 
+                                                                                color: '#0077b5',
+                                                                                fontSize: 26,
+                                                                                cursor: 'pointer',
+                                                                                '&:hover': { 
+                                                                                    color: '#005885',
+                                                                                    transform: 'scale(1.15)',
+                                                                                    filter: 'drop-shadow(0 2px 8px rgba(0, 119, 181, 0.3))'
+                                                                                },
+                                                                                transition: 'all 0.3s ease'
+                                                                            }}
+                                                                        />
+                                                                    </Box>
+                                                                    <Box
+                                                                        component="a"
+                                                                        href={developer.github}
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        sx={{ 
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            textDecoration: 'none'
+                                                                        }}
+                                                                    >
+                                                                        <GitHubIcon
+                                                                            sx={{ 
+                                                                                color: '#23272f', 
+                                                                                fontSize: 25,
+                                                                                cursor: 'pointer',
+                                                                                ml: 0.5,
+                                                                                '&:hover': { 
+                                                                                    color: '#444950', 
+                                                                                    transform: 'scale(1.15)',
+                                                                                    filter: 'drop-shadow(0 2px 8px rgba(35, 39, 47, 0.18))'
+                                                                                },
+                                                                                transition: 'all 0.3s ease'
+                                                                            }}
+                                                                        />
+                                                                    </Box>
+                                                                    <Box
+                                                                        component="a"
+                                                                        href={`mailto:${developer.email}`}
+                                                                        sx={{ 
+                                                                            display: 'inline-flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            textDecoration: 'none'
+                                                                        }}
+                                                                    >
+                                                                        <EmailIcon
+                                                                            sx={{ 
+                                                                                color: '#ffb300', // orange/yellow
+                                                                                fontSize: 25,
+                                                                                cursor: 'pointer',
+                                                                                ml: 0.5,
+                                                                                '&:hover': { 
+                                                                                    color: '#ff8f00', // darker orange
+                                                                                    transform: 'scale(1.15)',
+                                                                                    filter: 'drop-shadow(0 2px 8px rgba(255, 179, 0, 0.3))'
+                                                                                },
+                                                                                transition: 'all 0.3s ease'
+                                                                            }}
+                                                                        />
+                                                                    </Box>
+                                                                </Box>
+                                                            )}
+                                                            {!isCenter && (
+                                                                <Box sx={{ 
+                                                                    mt: 1,
+                                                                    opacity: fadeIn ? 0.7 : 0.3,
+                                                                    transform: fadeIn ? 'translateY(0)' : 'translateY(10px)',
+                                                                    transition: `all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardIndex * 0.2}s`
+                                                                }}>
+                                                                    <Typography variant="caption" sx={{ 
+                                                                        color: '#999', 
+                                                                        fontStyle: 'italic',
+                                                                        fontSize: '0.7rem'
+                                                                    }}>
+                                                                        Click to learn more
+                                                                    </Typography>
+                                                                </Box>
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
                                                 </Box>
-                                            )}
-                                            
-                                            {!isCenter && (
-                                                <Box sx={{ 
-                                                    mt: 1,
-                                                    opacity: fadeIn ? 0.7 : 0.3,
-                                                    transform: fadeIn ? 'translateY(0)' : 'translateY(10px)',
-                                                    transition: `all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) ${cardIndex * 0.2}s`
-                                                }}>
-                                                    <Typography variant="caption" sx={{ 
-                                                        color: '#999', 
-                                                        fontStyle: 'italic',
-                                                        fontSize: '0.7rem'
-                                                    }}>
-                                                        Click to learn more
-                                                    </Typography>
-                                                </Box>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                            );
+                                        })}
+                                    </>
                                 );
-                            });
                             })()}
                         </Box>
                         
