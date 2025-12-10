@@ -19,3 +19,4 @@ openpyxl
 tzdata
 stripe
 resend
+pandas_market_calendars

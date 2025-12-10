@@ -13,6 +13,8 @@ from models import Stock_Prediction
 import threading
 import time
 import random
+import util.market_time as market_time
+from util.market_time import is_market_open, is_trade_day, time_until_next_market_open
 
 load_dotenv()
 
@@ -277,28 +279,61 @@ class StockPredictionService:
         except Exception as e:
             logger.error(f"Failed to save prediction: {e}")
     
+    # def prediction_loop(self, tickers: List[str] = None):
+    #     """Main prediction loop that runs every 5 minutes"""
+    #     if tickers is None:
+    #         tickers = ['AAPL']  # Default to AAPL, can be expanded
+        
+    #     logger.info(f"Starting prediction loop for tickers: {tickers}")
+        
+    #     while self.is_running:
+    #         try:
+    #             for ticker in tickers:
+    #                 # Make prediction
+    #                 prediction_data = self.make_prediction(ticker)
+    #                 if prediction_data:
+    #                     # Save to database
+    #                     self.save_prediction(prediction_data)
+                
+    #             # Wait for 5 minutes (300 seconds)
+    #             time.sleep(300)
+                
+    #         except Exception as e:
+    #             logger.error(f"Error in prediction loop: {e}")
+    #             time.sleep(60)  # Wait 1 minute before retrying
+
     def prediction_loop(self, tickers: List[str] = None):
-        """Main prediction loop that runs every 5 minutes"""
+        """Runs predictions only during live market hours"""
         if tickers is None:
-            tickers = ['AAPL']  # Default to AAPL, can be expanded
-        
-        logger.info(f"Starting prediction loop for tickers: {tickers}")
-        
+            tickers = ['AAPL']
+
+        logger.info(f"Starting SMART prediction loop with tickers: {tickers}")
+
         while self.is_running:
-            try:
-                for ticker in tickers:
-                    # Make prediction
-                    prediction_data = self.make_prediction(ticker)
-                    if prediction_data:
-                        # Save to database
-                        self.save_prediction(prediction_data)
-                
-                # Wait for 5 minutes (300 seconds)
-                time.sleep(300)
-                
-            except Exception as e:
-                logger.error(f"Error in prediction loop: {e}")
-                time.sleep(60)  # Wait 1 minute before retrying
+
+            # Market closed today
+            if not is_trade_day():
+                logger.info("🚫 Market closed today (weekend or holiday). Waiting for next open...")
+                sleep_time = time_until_next_market_open()
+                time.sleep(min(sleep_time, 3600))  # sleep max 1 hour at a time
+                continue
+
+            # Outside 9:30–4
+            if not is_market_open():
+                sleep_time = time_until_next_market_open()
+                logger.info(f"⏳ Market closed. Next open in {round(sleep_time / 60, 1)} min.")
+                time.sleep(min(sleep_time, 3600))
+                continue
+
+            # ---- Market is OPEN → Run predictions ----
+            logger.info("🟢 Market open → Running predictions...")
+
+            for ticker in tickers:
+                prediction_data = self.make_prediction(ticker)
+                if prediction_data:
+                    self.save_prediction(prediction_data)
+
+            time.sleep(300)  # repeat every 5 minutes
     
     def start_predictions(self, tickers: List[str] = None):
         """Start the background prediction service"""
@@ -315,6 +350,11 @@ class StockPredictionService:
             logger.info("Model already loaded, skipping reload")
         
         self.is_running = True
+        # self.prediction_thread = threading.Thread(
+        #     target=self.prediction_loop,
+        #     args=(tickers,),
+        #     daemon=True
+        # )
         self.prediction_thread = threading.Thread(
             target=self.prediction_loop,
             args=(tickers,),
