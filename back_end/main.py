@@ -1,7 +1,11 @@
 from fastapi import FastAPI, status, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 import models
+
+# Load environment variables at startup
+load_dotenv()
 import plaid_routes
 from database import engine, SessionLocal
 from typing import Annotated

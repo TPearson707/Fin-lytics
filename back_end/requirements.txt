@@ -18,4 +18,4 @@ autogluon
 openpyxl
 tzdata
 stripe
-boto3
+resend

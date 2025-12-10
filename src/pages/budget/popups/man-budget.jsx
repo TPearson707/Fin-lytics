@@ -95,10 +95,9 @@ const ManageBudgets = ({ onClose }) => {
             const token = localStorage.getItem("token");
             const currentDate = new Date();
             const startOfYear = new Date(currentDate.getFullYear(), 0, 1);
-            const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
             
             // Make both API calls in parallel for faster loading
-            const [yearResponse, monthResponse] = await Promise.all([
+            const [yearResponse, monthlySpendingResponse] = await Promise.all([
                 axios.get("http://localhost:8000/user_transactions/", {
                     headers: { Authorization: `Bearer ${token}` },
                     withCredentials: true,
@@ -107,13 +106,10 @@ const ManageBudgets = ({ onClose }) => {
                         end_date: currentDate.toISOString().split('T')[0]
                     }
                 }),
-                axios.get("http://localhost:8000/user_transactions/", {
+                // Use new spending summary endpoint for monthly data
+                axios.get("http://localhost:8000/budget-goals/spending-summary", {
                     headers: { Authorization: `Bearer ${token}` },
-                    withCredentials: true,
-                    params: {
-                        start_date: startOfMonth.toISOString().split('T')[0],
-                        end_date: currentDate.toISOString().split('T')[0]
-                    }
+                    withCredentials: true
                 })
             ]);
 
@@ -136,40 +132,13 @@ const ManageBudgets = ({ onClose }) => {
             
             setAnnualSpending(totalAnnualSpent);
 
-            // Process monthly spending with optimized category matching
-            const { plaid_transactions: monthPlaid = [], db_transactions: monthDb = [], user_transactions: monthUser = [] } = monthResponse.data;
-            const monthlySpendingByCategory = {};
+            // Use the spending summary data directly from the backend
+            const monthlySpendingByCategory = monthlySpendingResponse.data;
             
-            // Pre-build category lookup map for faster matching
-            const categoryLookup = new Map();
-            const otherCategory = categories.find(cat => cat.name.toLowerCase() === 'other');
-            
+            // Ensure all categories have a spending value (even if 0)
             categories.forEach(category => {
-                monthlySpendingByCategory[category.name] = 0;
-                categoryLookup.set(category.name.toLowerCase(), category.name);
-            });
-
-            const processedMonthlyIds = new Set();
-            
-            [...monthPlaid, ...monthDb, ...monthUser].forEach(transaction => {
-                if (processedMonthlyIds.has(transaction.transaction_id)) {
-                    return;
-                }
-                processedMonthlyIds.add(transaction.transaction_id);
-                
-                const rawAmount = transaction.amount || 0;
-                const amount = (rawAmount > 0 || transaction.source === 'user') ? Math.abs(rawAmount) : 0;
-                
-                if (amount > 0) {
-                    const transactionCategory = transaction.category;
-                    const matchedCategory = transactionCategory ? 
-                        categoryLookup.get(transactionCategory.toLowerCase()) : null;
-                    
-                    if (matchedCategory) {
-                        monthlySpendingByCategory[matchedCategory] += amount;
-                    } else if (otherCategory) {
-                        monthlySpendingByCategory[otherCategory.name] += amount;
-                    }
+                if (!(category.name in monthlySpendingByCategory)) {
+                    monthlySpendingByCategory[category.name] = 0;
                 }
             });
 
