@@ -1,7 +1,10 @@
-from fastapi import FastAPI, status, Depends, HTTPException
+from fastapi import FastAPI, status, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+import os
 import models
 
 # Load environment variables at startup
@@ -38,6 +41,30 @@ async def lifespan(app: FastAPI):
     cleanup_prediction_service()
 
 app = FastAPI(lifespan=lifespan)
+
+# Exception handler for validation errors
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    error_messages = []
+    for error in exc.errors():
+        field_name = error["loc"][-1] if error["loc"] else "field"
+        message = error["msg"]
+        
+        if error["type"] == "value_error" and message.startswith(("Email must be", "Phone number must be")):
+            error_messages.append(message)
+        else:
+            error_messages.append(f"{field_name}: {message}")
+    
+    if len(error_messages) == 1:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": error_messages[0]}
+        )
+    else:
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            content={"detail": "Validation failed", "errors": error_messages}
+        )
 
 origins = [
     "https://localhost:5173",

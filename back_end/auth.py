@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from fastapi import FastAPI, Depends, HTTPException, status, APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from sqlalchemy.orm import Session
 from starlette import status
 from database import SessionLocal
@@ -10,6 +10,8 @@ from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from jose import JWTError, jwt
 from email_service import send_email
+import re
+import os
 
 router = APIRouter(
     prefix='/auth',
@@ -17,12 +19,28 @@ router = APIRouter(
 )
 
 # Configuration
-SECRET_KEY = "hello"  # Key for JWT encoding (replace later)
-ALGORITHM = "HS256"  # Algorithm for JWT encoding
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Access token duration
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "hello")  # Use env var or fallback to default (change in production!)
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")  # Algorithm for JWT encoding
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("JWT_EXPIRE_MINUTES", "30"))  # Access token duration
 
 bcrypt = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+# Validation functions
+def validate_email(email: str) -> str:
+    """Validate email format."""
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_regex, email):
+        raise ValueError('Email must be valid')
+    return email
+
+def validate_phone_number(phone: str) -> str:
+    """Validate phone number format (10 digits)."""
+    # Remove any non-digit characters
+    phone_digits = re.sub(r'\D', '', phone)
+    if len(phone_digits) != 10:
+        raise ValueError(f'Phone number must be valid')
+    return phone_digits
 
 # Pydantic models
 class CreateUserRequest(BaseModel):
@@ -33,6 +51,14 @@ class CreateUserRequest(BaseModel):
     username: str
     phone_number: str
     password: str
+
+    @validator('email')
+    def validate_email_field(cls, v):
+        return validate_email(v)
+
+    @validator('phone_number')
+    def validate_phone_field(cls, v):
+        return validate_phone_number(v)
 
 class Token(BaseModel):
     """Schema for authentication token response."""
