@@ -41,7 +41,7 @@ export default function AdminLayout() {
   ];
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", px: 3, pt: 1, pl: 12}}>
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", px: 3, pt: 1}}>
       <Typography variant="h4" sx={{ mb: 1 , mt: 3}}>
         Admin Dashboard
       </Typography>

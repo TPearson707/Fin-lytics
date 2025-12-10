@@ -103,14 +103,14 @@ export default function Marketplace() {
 
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4, pl: 12 }}>
       <Box className="marketplace-header" sx={{ mb: 2 }}>
         <Typography variant="h4" fontWeight={700}>
           Algorithm Marketplace
         </Typography>
       </Box>
 
-      <Box className="marketplace-controls" sx={{ }}>
+      <Box className="marketplace-controls">
         <FilterBar
           filters={filters}
           onChange={(partial) => {
