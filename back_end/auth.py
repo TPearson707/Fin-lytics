@@ -215,6 +215,28 @@ def hashPassword(password: str):
     return bcrypt.hash(password);
 
 @router.get("/me")
-async def get_me(user: dict = Depends(get_current_user)):
-    return user
+async def get_me(
+    user: dict = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    db_user = db.query(Users).filter(Users.id == user["id"]).first()
+
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {
+        "id": db_user.id,
+        "username": db_user.username,
+        "email": db_user.email,
+        "first_name": db_user.first_name,
+        "last_name": db_user.last_name,
+
+        # ROLE FIELDS
+        "is_admin": db_user.is_admin,
+        "is_seller": db_user.is_seller,
+        "seller_verified": db_user.seller_verified,
+
+        # Optional: to help with UI
+        "is_verified": db_user.is_verified
+    }
 

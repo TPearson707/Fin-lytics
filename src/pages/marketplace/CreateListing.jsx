@@ -34,7 +34,7 @@ export default function CreateListing() {
         version: form.version,
       });
 
-      navigate(`/marketplace/${res.data.listing_id}`);
+      navigate(`/marketplace/${res.data.id}`);
     } catch (err) {
       setError(err.response?.data?.detail || "Failed to create listing.");
     }

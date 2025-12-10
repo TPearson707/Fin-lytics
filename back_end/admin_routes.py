@@ -54,7 +54,7 @@ class ListingApprovalResponse(BaseModel):
         from_attributes = True
 
 class SellerVerificationRequest(BaseModel):
-    user_id: int
+    # user_id: int
     verified: bool
 
 class MarketplaceStats(BaseModel):
@@ -190,25 +190,25 @@ async def verify_seller(
     user: user_dependency = None,
     db: db_dependency = None
 ):
-    """Verify or unverify a seller (admin only)."""
     check_admin(user, db)
-    
+
     seller = db.query(Users).filter(Users.id == user_id).first()
     if not seller:
         raise HTTPException(status_code=404, detail="User not found")
-    
-    seller.is_seller = True  # Enable seller role
+
+    seller.is_seller = not verify_request.verified and seller.is_seller or True
     seller.seller_verified = verify_request.verified
-    
+
     db.commit()
     db.refresh(seller)
-    
+
     return {
         "message": f"Seller verification {'granted' if verify_request.verified else 'revoked'}",
         "user_id": seller.id,
         "username": seller.username,
         "seller_verified": seller.seller_verified
     }
+
 
 @router.get("/stats", status_code=status.HTTP_200_OK)
 async def get_marketplace_stats(
@@ -302,5 +302,51 @@ async def admin_delete_listing(
         "message": "Listing deleted successfully by admin"
     }
 
+# GIVE PERMS ROUTE FOR DEV
+@router.post("/self/promote", status_code=200)
+async def promote_self(user: user_dependency, db: db_dependency):
+    """TEMPORARY: Promote current user to full seller/admin for dev purposes."""
+    usr = db.query(Users).filter(Users.id == user["id"]).first()
 
+    if not usr:
+        raise HTTPException(404, "User not found")
+
+    usr.is_admin = True
+    usr.is_seller = True
+    usr.seller_verified = True
+
+    db.commit()
+    db.refresh(usr)
+
+    return {
+        "message": "Role promotion complete.",
+        "user_id": usr.id,
+        "username": usr.username,
+        "roles": {
+            "admin": usr.is_admin,
+            "seller": usr.is_seller,
+            "verified_seller": usr.seller_verified,
+        }
+    }
+
+
+@router.get("/sellers", status_code=200)
+async def get_sellers(user: user_dependency = None, db: db_dependency = None):
+    check_admin(user, db)
+
+    sellers = db.query(Users).filter(Users.is_seller == True).all()
+
+    return [
+        {
+            "id": s.id,
+            "username": s.username,
+            "email": s.email,
+            "first_name": s.first_name,
+            "last_name": s.last_name,
+            "seller_verified": s.seller_verified,
+            # "created_at": s.created_at,
+            "is_admin": s.is_admin,
+        }
+        for s in sellers
+    ]
 

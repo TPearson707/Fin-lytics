@@ -29,6 +29,7 @@ export default function AlgorithmDetails() {
   const [newReview, setNewReview] = useState({ rating: 0, comment: "" });
   const [reviewError, setReviewError] = useState("");
 
+  // ---------------- FETCH DATA ----------------
   const fetchAlgo = async () => {
     try {
       const res = await api.get(`/algorithms/${id}`);
@@ -43,6 +44,7 @@ export default function AlgorithmDetails() {
   const fetchMe = async () => {
     const token = localStorage.getItem("token");
     if (!token) return;
+
     try {
       const res = await api.get("/auth/me");
       setCurrentUser(res.data);
@@ -62,6 +64,7 @@ export default function AlgorithmDetails() {
     fetchReviews();
   }, [id]);
 
+  // ---------------- PURCHASE ----------------
   const handlePurchase = async () => {
     try {
       const res = await api.post("/algorithms/purchase", { listing_id: Number(id) });
@@ -69,7 +72,7 @@ export default function AlgorithmDetails() {
       if (res.data.checkout_url) {
         window.location.href = res.data.checkout_url;
       } else {
-        alert("Algorithm added to library.");
+        alert("Algorithm added to your library.");
         fetchAlgo();
       }
     } catch (err) {
@@ -77,6 +80,7 @@ export default function AlgorithmDetails() {
     }
   };
 
+  // ---------------- DOWNLOAD ----------------
   const handleDownload = async () => {
     try {
       const response = await api.get(`/algorithms/${id}/download`, {
@@ -89,39 +93,56 @@ export default function AlgorithmDetails() {
       link.download = algo.file_name || `algorithm_${id}`;
       link.click();
     } catch {
-      alert("Failed to download file.");
+      alert("Failed to download.");
     }
   };
 
+  // ---------------- SUBMIT REVIEW ----------------
   const submitReview = async () => {
-    if (newReview.rating === 0) return setReviewError("Rating required");
+    if (newReview.rating === 0)
+      return setReviewError("Rating is required.");
+
     try {
-      await api.post("/algorithms/reviews", {
+      const res = await api.post("/algorithms/reviews", {
         listing_id: Number(id),
         rating: newReview.rating,
         comment: newReview.comment,
       });
 
+      // ⭐ FIXED: Update UI immediately using backend response key
+      setAlgo(prev => ({
+        ...prev,
+        rating: res.data.updated_rating,    // <-- PATCHED
+        num_reviews: (prev.num_reviews ?? 0) + 1
+      }));
+
       setNewReview({ rating: 0, comment: "" });
       setReviewError("");
+
       fetchReviews();
-      fetchAlgo();
+
     } catch (err) {
-      setReviewError(err.response?.data?.detail || "Failed to submit review");
+      setReviewError(err.response?.data?.detail || "Failed to submit review.");
     }
   };
 
-  if (loading) return <CircularProgress sx={{ mt: 6, mx: "auto", display: "block" }} />;
+  // ---------------- CONDITIONALS ----------------
+  if (loading)
+    return <CircularProgress sx={{ mt: 6, mx: "auto", display: "block" }} />;
 
   if (!algo)
-    return <Alert severity="error" sx={{ mt: 5, maxWidth: 600, mx: "auto" }}>Algorithm not found.</Alert>;
+    return (
+      <Alert severity="error" sx={{ mt: 5, maxWidth: 600, mx: "auto" }}>
+        Algorithm not found.
+      </Alert>
+    );
 
   const isOwner = currentUser && currentUser.id === algo.user_id;
   const priceLabel = algo.price ? `$${algo.price.toFixed(2)}` : "Free";
 
   return (
     <Box maxWidth="900px" mx="auto" mt={5}>
-      {/* HEADER INFO */}
+      {/* ------------ HEADER ------------ */}
       <Typography variant="h4" fontWeight={700}>{algo.title}</Typography>
       <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
         by {algo.author_username}
@@ -132,7 +153,7 @@ export default function AlgorithmDetails() {
         <Typography color="text.secondary">({reviews.length} reviews)</Typography>
       </Stack>
 
-      {/* TAGS */}
+      {/* ------------ TAGS ------------ */}
       {algo.category && (
         <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
           {algo.category.split(",").map((tag, i) => (
@@ -141,7 +162,7 @@ export default function AlgorithmDetails() {
         </Stack>
       )}
 
-      {/* PRICE */}
+      {/* ------------ PRICE ------------ */}
       <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
         Price: {priceLabel}
       </Typography>
@@ -150,14 +171,20 @@ export default function AlgorithmDetails() {
 
       <Divider sx={{ my: 3 }} />
 
-      {/* ACTIONS */}
+      {/* ------------ ACTIONS ------------ */}
       <Stack direction="row" spacing={2}>
-        {isOwner && <Button variant="contained" onClick={() => setShowUploadModal(true)}>Upload File</Button>}
+        {isOwner && (
+          <Button variant="contained" onClick={() => setShowUploadModal(true)}>
+            Upload File
+          </Button>
+        )}
 
         {algo.has_purchased || isOwner ? (
           <Button variant="outlined" onClick={handleDownload}>Download</Button>
         ) : algo.price > 0 ? (
-          <Button variant="contained" color="success" onClick={handlePurchase}>Buy Now</Button>
+          <Button variant="contained" color="success" onClick={handlePurchase}>
+            Buy Now
+          </Button>
         ) : (
           <Button variant="outlined" onClick={handleDownload}>Download Free</Button>
         )}
@@ -167,13 +194,31 @@ export default function AlgorithmDetails() {
             Edit Listing
           </Button>
         )}
+        {isOwner && (
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={async () => {
+            if (!window.confirm("Are you sure? This cannot be undone.")) return;
+
+            try {
+              await api.delete(`/algorithms/${id}`);
+              alert("Listing deleted.");
+              navigate("/marketplace");
+            } catch (err) {
+              alert(err.response?.data?.detail || "Failed to delete.");
+            }
+          }}
+        >
+          Delete Listing
+        </Button>
+      )}
       </Stack>
 
-      {/* REVIEWS */}
+      {/* ------------ REVIEWS ------------ */}
       <Divider sx={{ my: 4 }} />
       <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>Reviews</Typography>
 
-      {/* Review Form (only if purchased) */}
       {algo.has_purchased && !isOwner && (
         <Paper sx={{ p: 2, mb: 3 }}>
           <Typography variant="subtitle1" sx={{ mb: 1 }}>Write a Review</Typography>
@@ -187,7 +232,7 @@ export default function AlgorithmDetails() {
             fullWidth
             multiline
             rows={3}
-            placeholder="Write your thoughts…"
+            placeholder="Share your thoughts..."
             sx={{ mt: 2 }}
             value={newReview.comment}
             onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
@@ -195,22 +240,25 @@ export default function AlgorithmDetails() {
 
           {reviewError && <Alert severity="error" sx={{ mt: 1 }}>{reviewError}</Alert>}
 
-          <Button sx={{ mt: 2 }} variant="contained" onClick={submitReview}>Submit Review</Button>
+          <Button sx={{ mt: 2 }} variant="contained" onClick={submitReview}>
+            Submit Review
+          </Button>
         </Paper>
       )}
 
-      {/* List Reviews */}
+      {/* LIST REVIEW CARDS */}
       {reviews.map((r) => (
         <Paper key={r.id} sx={{ p: 2, mb: 2 }}>
           <Stack direction="row" spacing={1} alignItems="center">
-            <Rating value={r.rating} readOnly precision={0.5} size="small" />
+            <Rating value={r.rating} readOnly size="small" precision={0.5} />
+            {/* ⭐ FIXED: Correct reviewer field */}
             <Typography variant="subtitle2">{r.reviewer_username}</Typography>
           </Stack>
           <Typography sx={{ mt: 1 }}>{r.comment || "No comment"}</Typography>
         </Paper>
       ))}
 
-      {/* MODAL */}
+      {/* ------------ MODAL ------------ */}
       <UploadFileModal
         listingId={id}
         open={showUploadModal}

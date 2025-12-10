@@ -18,6 +18,13 @@ from database import SessionLocal
 from models import Algorithm_Listing, Users, Algorithm_Purchase, Algorithm_Review
 from auth import get_current_user
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+# Initialize Stripe
+stripe.api_key = os.getenv("STRIPE_KEY")
 
 load_dotenv()
 
@@ -99,11 +106,18 @@ def check_seller(user: dict, db: Session):
     return seller
 
 def has_purchased(db: Session, buyer_id: int, listing_id: int):
+    # Owner always counts as purchased
+    listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
+    if listing and listing.user_id == buyer_id:
+        return True
+
+    # Otherwise check purchase record
     return db.query(Algorithm_Purchase).filter(
         Algorithm_Purchase.buyer_id == buyer_id,
         Algorithm_Purchase.listing_id == listing_id,
         Algorithm_Purchase.payment_status == "completed"
     ).first() is not None
+
 
 
 # ==========================================================
@@ -146,6 +160,9 @@ async def marketplace_listing(
                 "tags": item.category.split(",") if item.category else [],
                 "price": item.price,
                 "rating": item.rating,
+                "num_reviews": db.query(Algorithm_Review)
+                               .filter(Algorithm_Review.listing_id == item.id)
+                               .count(), 
                 "updated_at": item.updated_at,
             }
             for item in items
@@ -195,6 +212,43 @@ async def create_listing(payload: AlgorithmListingCreate, user: user_dependency,
     db.refresh(listing)
 
     return {"message": "Listing created", "id": listing.id}
+
+@router.delete("/{listing_id}", status_code=200)
+async def delete_listing(
+    listing_id: int,
+    user: user_dependency,
+    db: db_dependency
+):
+    listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
+
+    if not listing:
+        raise HTTPException(404, "Listing not found")
+
+    if listing.user_id != user["id"]:
+        raise HTTPException(403, "Not authorized")
+
+    # Delete file if exists
+    if listing.file_path and os.path.exists(listing.file_path):
+        try:
+            os.remove(listing.file_path)
+        except:
+            pass  # avoid breaking delete if file is already gone
+
+    # Delete purchases
+    db.query(Algorithm_Purchase).filter(
+        Algorithm_Purchase.listing_id == listing_id
+    ).delete()
+
+    # Delete reviews
+    db.query(Algorithm_Review).filter(
+        Algorithm_Review.listing_id == listing_id
+    ).delete()
+
+    # Remove listing
+    db.delete(listing)
+    db.commit()
+
+    return {"message": "Listing deleted"}
 
 
 @router.put("/{listing_id}", status_code=200)
@@ -252,13 +306,19 @@ async def purchase_algorithm(payload: PurchaseRequest, user: user_dependency, db
     if not listing:
         raise HTTPException(404, "Listing not found")
 
-    if listing.price and listing.price > 0:
-        raise HTTPException(501, "Stripe flow not configured on frontend yet")
+    # Prevent buying your own listing
+    if listing.user_id == user["id"]:
+        return {"message": "You already own this listing"}
 
+    # If already purchased, don't duplicate rows
+    if has_purchased(db, user["id"], payload.listing_id):
+        return {"message": "Already purchased"}
+
+    # (Stripe logic later — free purchase for now)
     purchase = Algorithm_Purchase(
         buyer_id=user["id"],
         listing_id=listing.id,
-        purchase_price=0.0,
+        purchase_price=listing.price or 0.0,
         payment_status="completed"
     )
 
@@ -268,22 +328,41 @@ async def purchase_algorithm(payload: PurchaseRequest, user: user_dependency, db
     return {"message": "Algorithm unlocked"}
 
 
+
 @router.get("/{listing_id}/download", status_code=200)
-async def download_algorithm(listing_id: int, user: user_dependency, db: db_dependency):
+async def download_algorithm(
+    listing_id: int,
+    user: user_dependency,
+    db: db_dependency
+):
+    listing = db.query(Algorithm_Listing).filter(
+        Algorithm_Listing.id == listing_id
+    ).first()
 
-    listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
+    if not listing:
+        raise HTTPException(404, "Listing not found")
 
-    if not listing or not listing.file_path or not os.path.exists(listing.file_path):
-        raise HTTPException(404, "File missing")
+    if not listing.file_path or not os.path.exists(listing.file_path):
+        raise HTTPException(404, "File missing or not uploaded yet")
 
-    if listing.price and listing.price > 0:
-        if not user or not has_purchased(db, user["id"], listing_id):
-            raise HTTPException(403, "Purchase required")
+    # ---- Check permissions ----
+    is_owner = user and user["id"] == listing.user_id
+    has_access = user and has_purchased(db, user["id"], listing_id)
 
+    # If the listing has a price and the requester isn't the owner or a buyer
+    if listing.price and listing.price > 0 and not (is_owner or has_access):
+        raise HTTPException(403, "Purchase required")
+
+    # ---- Count download ----
     listing.download_count += 1
     db.commit()
 
-    return FileResponse(listing.file_path, filename=listing.file_name)
+    return FileResponse(
+        listing.file_path,
+        filename=listing.file_name,
+        media_type="application/octet-stream"
+    )
+
 
 
 # ==========================================================
@@ -306,7 +385,19 @@ async def create_review(payload: ReviewCreate, user: user_dependency, db: db_dep
     db.add(review)
     db.commit()
 
-    return {"message": "Review submitted"}
+    # --- NEW: Update aggregate rating on listing ---
+    avg_rating = db.query(func.avg(Algorithm_Review.rating)).filter(
+        Algorithm_Review.listing_id == payload.listing_id
+    ).scalar()
+
+    listing = db.query(Algorithm_Listing).filter(
+        Algorithm_Listing.id == payload.listing_id
+    ).first()
+
+    listing.rating = round(float(avg_rating or 0), 2)
+    db.commit()
+
+    return {"message": "Review submitted", "updated_rating": listing.rating}
 
 
 @router.get("/{listing_id}/reviews", status_code=status.HTTP_200_OK)

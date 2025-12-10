@@ -22,6 +22,7 @@ import {
 import { styled } from "@mui/system";
 import axios from "axios";
 import StorefrontIcon from '@mui/icons-material/Storefront';
+import SecurityIcon from "@mui/icons-material/Security";
 
 const StyledListItem = styled(({ button, ...otherProps }) => {
   const { component: Component = "div", ...rest } = otherProps;
@@ -49,27 +50,32 @@ const Sidebar = ({ setIsAuthenticated }) => {
   };
 
   const getUser = async () => {
-    if (setIsAuthenticated) {
-      try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get("http://localhost:8000/", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-        const { first_name, last_name, username, id } = response.data.User;
-        setUser({ firstName: first_name, lastName: last_name, username, id });
-      } catch (error) {
-        if (error.response && error.response.status === 401) {
-          console.error("Unauthorized: Redirecting to login.");
-          navigate("/login");
-        } else {
-          console.error("Error fetching user:", error);
-        }
+      const response = await axios.get("http://localhost:8000/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      // Matches actual API response shape
+      const { first_name, last_name, username, id, is_admin, is_seller, seller_verified } = response.data;
+
+      setUser({
+        firstName: first_name,
+        lastName: last_name,
+        username,
+        id,
+        is_admin,
+        is_seller,
+        seller_verified
+      });
+
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      if (error.response?.status === 401) {
+        navigate("/login");
       }
-    } else {
-      console.log("Could not get user, user is unauthorized");
     }
   };
 
@@ -144,6 +150,17 @@ const Sidebar = ({ setIsAuthenticated }) => {
                 primary={<Typography sx={{ fontSize: "1rem" }}>Budgeter</Typography>}
               />
             </StyledListItem>
+            {user?.is_admin && (
+              <StyledListItem button component={Link} to="/admin">
+                <ListItemIcon sx={{ color: 'gold', minWidth: 40 }}>
+                  <SecurityIcon /> {/* requires import below */}
+                </ListItemIcon>
+                <ListItemText
+                  primary={<Typography sx={{ fontSize: "1rem", fontWeight: 600 }}>Admin Panel</Typography>}
+                />
+              </StyledListItem>
+            )}
+
           </List>
           <Divider />
         </Box>
