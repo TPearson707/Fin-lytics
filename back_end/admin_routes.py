@@ -349,4 +349,3 @@ async def get_sellers(user: user_dependency = None, db: db_dependency = None):
         }
         for s in sellers
     ]
-
