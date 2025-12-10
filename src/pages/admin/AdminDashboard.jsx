@@ -74,92 +74,91 @@ export default function AdminDashboard() {
   const COLORS = ["#ffb703", "#219ebc", "#d62828"];
 
   return (
-    <Box>
-      <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
-        Admin Dashboard
-      </Typography>
+    <>
+      <Box sx={{ minHeight: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Typography variant="h5" fontWeight={700} sx={{ mb: 2 }}>
+          Overview
+        </Typography>
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          {[
+            { label: "Total Listings", value: stats.total_listings },
+            { label: "Total Purchases", value: stats.total_purchases },
+            { label: "Total Revenue", value: `$${stats.total_revenue.toFixed(2)}` },
+            { label: "Verified Sellers", value: stats.verified_sellers },
+          ].map((card, i) => (
+            <Grid item xs={12} sm={6} md={3} key={i}>
+              <Paper sx={{ p: 4, textAlign: "center", borderRadius: 2, boxShadow: 3 }}>
+                <Typography variant="h3" color="primary.main">{card.value}</Typography>
+                <Typography variant="body1" color="text.secondary" sx={{ fontWeight: 500 }}>
+                  {card.label}
+                </Typography>
+              </Paper>
+            </Grid>
+          ))}
+        </Grid>
 
-      {/* Stats Panel */}
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {[
-          { label: "Total Listings", value: stats.total_listings },
-          { label: "Total Purchases", value: stats.total_purchases },
-          { label: "Total Revenue", value: `$${stats.total_revenue.toFixed(2)}` },
-          { label: "Verified Sellers", value: stats.verified_sellers },
-        ].map((card, i) => (
-          <Grid item xs={12} sm={6} md={3} key={i}>
-            <Paper sx={{ p: 3, textAlign: "center", borderRadius: 2 }}>
-              <Typography variant="h4">{card.value}</Typography>
-              <Typography variant="body2" color="text.secondary">
-                {card.label}
+        {/* Visuals/Plots Section */}
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, width: '100%' }}>
+          <Box sx={{ flex: 1, minWidth: 350, maxWidth: 500 }}>
+            <Paper sx={{ p: 3, minHeight: 350, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <Typography sx={{ mb: 2, fontWeight: 600 }}>
+                Listing Approval Breakdown
               </Typography>
+              <ResponsiveContainer width={300} height={220}>
+                <PieChart>
+                  <Pie
+                    data={listingBreakdown}
+                    cx={150}
+                    cy={110}
+                    label
+                    outerRadius={90}
+                    dataKey="value"
+                  >
+                    {listingBreakdown.map((entry, index) => (
+                      <Cell key={index} fill={COLORS[index]} />
+                    ))}
+                  </Pie>
+                  <Legend verticalAlign="top" height={36} align="center" layout="horizontal" />
+                </PieChart>
+              </ResponsiveContainer>
             </Paper>
-          </Grid>
-        ))}
-      </Grid>
+          </Box>
 
-      {/* CHARTS */}
-      <Grid container spacing={3}>
-        {/* PIE CHART: LISTING STATUS */}
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, height: 330 }}>
-            <Typography sx={{ mb: 2, fontWeight: 600 }}>
-              Listing Approval Breakdown
-            </Typography>
-            <ResponsiveContainer width="100%" height="85%">
-              <PieChart>
-                <Pie
-                  data={listingBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  label
-                  outerRadius={90}
-                  dataKey="value"
-                >
-                  {listingBreakdown.map((entry, index) => (
-                    <Cell key={index} fill={COLORS[index]} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
+          <Box sx={{ flex: 2, minWidth: 350, maxWidth: 700 }}>
+            <Paper sx={{ p: 3, minHeight: 350, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <Typography sx={{ mb: 2, fontWeight: 600 }}>
+                Revenue Growth
+              </Typography>
+              <ResponsiveContainer width={400} height={220}>
+                <LineChart data={revenueHistory} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="month" tick={{ fontSize: 14 }} />
+                  <YAxis tick={{ fontSize: 14 }} />
+                  <Tooltip contentStyle={{ fontSize: 14 }} />
+                  <Legend verticalAlign="bottom" height={36} />
+                  <Line type="monotone" dataKey="revenue" stroke="#0a66c2" strokeWidth={4} dot={{ r: 6 }} activeDot={{ r: 8 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </Paper>
+          </Box>
 
-        {/* LINE CHART: REVENUE OVER TIME */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3, height: 330 }}>
-            <Typography sx={{ mb: 2, fontWeight: 600 }}>
-              Revenue Growth
-            </Typography>
-            <ResponsiveContainer width="100%" height="85%">
-              <LineChart data={revenueHistory}>
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Line type="monotone" dataKey="revenue" stroke="#0a66c2" strokeWidth={3} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-
-        {/* BAR CHART: SELLERS */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, height: 330 }}>
-            <Typography sx={{ mb: 2, fontWeight: 600 }}>
-              Seller Metrics
-            </Typography>
-            <ResponsiveContainer width="100%" height="85%">
-              <BarChart data={sellerData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value" fill="#457b9d" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Box>
+          <Box sx={{ flex: 1, minWidth: 350, maxWidth: 500 }}>
+            <Paper sx={{ p: 3, minHeight: 350, display: 'block', overflowX: 'auto' }}>
+              <Typography sx={{ mb: 2, fontWeight: 600 }}>
+                Seller Metrics
+              </Typography>
+              <ResponsiveContainer width={300} height={220}>
+                <BarChart data={sellerData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                  <XAxis dataKey="name" tick={{ fontSize: 14 }} />
+                  <YAxis tick={{ fontSize: 14 }} />
+                  <Tooltip contentStyle={{ fontSize: 14 }} />
+                  <Legend verticalAlign="bottom" height={36} />
+                  <Bar dataKey="value" fill="#457b9d" barSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Paper>
+          </Box>
+        </Box>
+      </Box>
+    </>
   );
 }

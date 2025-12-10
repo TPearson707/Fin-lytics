@@ -131,13 +131,13 @@ const Sidebar = ({ setIsAuthenticated }) => {
               />
             </StyledListItem>
             <StyledListItem button component={Link} to="/marketplace">
-            <ListItemIcon sx={{ color: "white", minWidth: 40 }}>
-              <StorefrontIcon />
-            </ListItemIcon>
-            <ListItemText
-              primary={<Typography sx={{ fontSize: "1rem" }}>Marketplace</Typography>}
-            />
-          </StyledListItem>
+              <ListItemIcon sx={{ color: "white", minWidth: 40 }}>
+                <StorefrontIcon />
+              </ListItemIcon>
+              <ListItemText
+                primary={<Typography sx={{ fontSize: "1rem" }}>Marketplace</Typography>}
+              />
+            </StyledListItem>
             <StyledListItem button component={Link} to="/Budget">
               <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
                 <AccountBalanceIcon />
@@ -146,18 +146,20 @@ const Sidebar = ({ setIsAuthenticated }) => {
                 primary={<Typography sx={{ fontSize: "1rem" }}>Budgeter</Typography>}
               />
             </StyledListItem>
-            {user?.is_admin && (
+          </List>
+          <Box sx={{ flexGrow: 1 }} />
+          {user?.is_admin && (
+            <List sx={{ position: 'absolute', bottom: 0, width: '100%' }}>
               <StyledListItem button component={Link} to="/admin">
                 <ListItemIcon sx={{ color: 'gold', minWidth: 40 }}>
-                  <SecurityIcon /> {/* requires import below */}
+                  <SecurityIcon />
                 </ListItemIcon>
                 <ListItemText
                   primary={<Typography sx={{ fontSize: "1rem", fontWeight: 600 }}>Admin Panel</Typography>}
                 />
               </StyledListItem>
-            )}
-
-          </List>
+            </List>
+          )}
           <Divider />
         </Box>
       </Drawer>

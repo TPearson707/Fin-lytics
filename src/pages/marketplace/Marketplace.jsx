@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { Container, Grid, Box, Typography, CircularProgress, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
+import { Container, Grid, Box, Typography, CircularProgress, Button, Tooltip, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem } from "@mui/material";
+import AddIcon from '@mui/icons-material/Add';
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import toast from "react-hot-toast";
 import AlgorithmCard from "./components/AlgorithmCard";
 import Pagination from "./components/Pagination";
 import FilterBar from "./components/FilterBar";
-import "./Marketplace.scss";
 
 export default function Marketplace() {
   const navigate = useNavigate();
@@ -17,6 +17,33 @@ export default function Marketplace() {
   const [filters, setFilters] = useState({ search: "", sortBy: "popular" });
   const [currentUser, setCurrentUser] = useState(null);
   const [sellerDialogOpen, setSellerDialogOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: "",
+    description: "",
+    category: "",
+    price: "",
+    version: "1.0.0",
+  });
+  const [createError, setCreateError] = useState("");
+
+  const handleCreateSubmit = async () => {
+    setCreateError("");
+    try {
+      const res = await api.post("/algorithms", {
+        title: createForm.title,
+        description: createForm.description,
+        category: createForm.category,
+        price: createForm.price ? parseFloat(createForm.price) : null,
+        version: createForm.version,
+      });
+      setCreateModalOpen(false);
+      setCreateForm({ title: "", description: "", category: "", price: "", version: "1.0.0" });
+      navigate(`/marketplace/${res.data.id}`);
+    } catch (err) {
+      setCreateError(err.response?.data?.detail || "Failed to create listing.");
+    }
+  };
 
   useEffect(() => {
     fetchMe();
@@ -74,55 +101,120 @@ export default function Marketplace() {
 
   const canCreate = currentUser?.is_admin || (currentUser?.is_seller && currentUser?.seller_verified);
 
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center">
+      <Box className="marketplace-header" sx={{ mb: 2 }}>
         <Typography variant="h4" fontWeight={700}>
           Algorithm Marketplace
         </Typography>
       </Box>
 
-      <FilterBar
-        filters={filters}
-        onChange={(partial) => {
-          setPage(1);
-          setFilters((prev) => ({ ...prev, ...partial }));
-        }}
-      />
+      <Box className="marketplace-controls" sx={{ }}>
+        <FilterBar
+          filters={filters}
+          onChange={(partial) => {
+            setPage(1);
+            setFilters((prev) => ({ ...prev, ...partial }));
+          }}
+          style={{ width: '100%' }}
+        />
+      </Box>
 
-      {/* ---- Conditional Button Logic ---- */}
+      {/* Create Listing button/modal below search bar */}
       {currentUser && (
-        <>
-          {/* Create Listing is available for ALL sellers (pending or verified) + admins */}
+        <Box sx={{ mb: 3 }}>
           {(currentUser.is_admin || currentUser.is_seller) ? (
-            <Button
-              variant="contained"
-              sx={{ mt: 2, mr: 2 }}
-              onClick={() => navigate("/marketplace/create")}
-            >
-              Create Listing
-            </Button>
+            <>
+              <Button
+                variant="contained"
+                sx={{ minWidth: 180, display: 'flex', alignItems: 'center', gap: 1 }}
+                onClick={() => setCreateModalOpen(true)}
+                startIcon={<AddIcon />}
+              >
+                Create Listing
+              </Button>
+              <Dialog open={createModalOpen} onClose={() => setCreateModalOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>Create Listing</DialogTitle>
+                <DialogContent>
+                  {/* CreateListing form logic inlined here */}
+                  <Box sx={{ pt: 1 }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+                      Create New Algorithm Listing
+                    </Typography>
+                    {createError && <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>}
+                    <TextField
+                      fullWidth
+                      label="Title"
+                      value={createForm.title}
+                      sx={{ mb: 2 }}
+                      onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Description"
+                      multiline
+                      rows={4}
+                      sx={{ mb: 2 }}
+                      value={createForm.description}
+                      onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+                    />
+                    <TextField
+                      fullWidth
+                      select
+                      label="Category"
+                      sx={{ mb: 2 }}
+                      value={createForm.category}
+                      onChange={(e) => setCreateForm({ ...createForm, category: e.target.value })}
+                    >
+                      <MenuItem value="Machine Learning">Machine Learning</MenuItem>
+                      <MenuItem value="Scalping">Scalping</MenuItem>
+                      <MenuItem value="Swing Trading">Swing Trading</MenuItem>
+                      <MenuItem value="Crypto">Crypto</MenuItem>
+                      <MenuItem value="Other">Other</MenuItem>
+                    </TextField>
+                    <TextField
+                      fullWidth
+                      label="Price (optional)"
+                      type="number"
+                      sx={{ mb: 2 }}
+                      value={createForm.price}
+                      onChange={(e) => setCreateForm({ ...createForm, price: e.target.value })}
+                    />
+                    <TextField
+                      fullWidth
+                      label="Version"
+                      value={createForm.version}
+                      sx={{ mb: 3 }}
+                      onChange={(e) => setCreateForm({ ...createForm, version: e.target.value })}
+                    />
+                  </Box>
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={() => setCreateModalOpen(false)}>Cancel</Button>
+                  <Button variant="contained" onClick={handleCreateSubmit}>Create Listing</Button>
+                </DialogActions>
+              </Dialog>
+            </>
           ) : (
             <Button
               variant="contained"
-              sx={{ mt: 2, mr: 2 }}
+              sx={{ minWidth: 180 }}
               onClick={requestSellerAccess}
             >
               Become a Seller
             </Button>
           )}
-
-          {/* Show pending status ONLY if seller exists but is not yet verified */}
           {currentUser.is_seller && !currentUser.seller_verified && (
             <Tooltip title="Your seller application is pending review by an admin.">
               <span>
-                <Button variant="outlined" disabled sx={{ mt: 2 }}>
+                <Button variant="outlined" disabled sx={{ minWidth: 180 }}>
                   Pending Approval
                 </Button>
               </span>
             </Tooltip>
           )}
-        </>
+        </Box>
       )}
 
 

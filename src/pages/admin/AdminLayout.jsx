@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Box, Toolbar, Tabs, Tab, CircularProgress } from "@mui/material";
+import { Box, Toolbar, Tabs, Tab, CircularProgress, Typography } from "@mui/material";
 import api from "../../api";
 
 import AdminDashboard from "./AdminDashboard";
@@ -41,10 +41,10 @@ export default function AdminLayout() {
   ];
 
   return (
-    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column" }}>
-      <Toolbar />
-
-      {/* Navigation */}
+    <Box sx={{ height: "100vh", display: "flex", flexDirection: "column", px: 3, pt: 1, pl: 12}}>
+      <Typography variant="h4" sx={{ mb: 1 , mt: 3}}>
+        Admin Dashboard
+      </Typography>
       <Tabs
         value={tab}
         onChange={(e, val) => setTab(val)}
@@ -57,14 +57,17 @@ export default function AdminLayout() {
         ))}
       </Tabs>
 
-      {/* Content */}
       <Box
         sx={(theme) => ({
           flexGrow: 1,
+          minHeight: 0,
+          height: '100%',
           overflowY: "auto",
           p: 3,
           backgroundColor: theme.palette.background.default,
           color: theme.palette.text.primary,
+          display: 'flex',
+          flexDirection: 'column',
         })}
       >
         {components[tab]}

@@ -22,10 +22,15 @@
   // content area beside the drawer
   .content-area {
     flex: 1;
-    margin-left: 180px; // 👈 matches Drawer width
-    padding: 24px;
+    margin-left: 100px;
+    padding: 0 16px 24px 20px; // reduce left padding for flush look
     overflow-y: auto;
     transition: margin-left 0.3s ease;
+  }
+
+  .page-title, .MuiTypography-root.page-title {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
   }
 
   .content-area::-webkit-scrollbar {

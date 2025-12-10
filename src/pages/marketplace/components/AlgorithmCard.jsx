@@ -52,8 +52,16 @@ export default function AlgorithmCard({ algo }) {
 
         <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: 1 }}>
           <Box>
+
             <Typography variant="body2" sx={{ fontWeight: 600 }}>
-              {algo.price === 0 ? "Free" : `$${algo.price.toFixed(2)}`}
+              {algo.price === 0 ? "Free" : `$${algo.price?.toFixed ? algo.price.toFixed(2) : 'N/A'}`}
+            </Typography>
+
+            <Typography variant="body2" color="text.secondary">
+              SMAPE: {typeof algo.smape === 'number' ? algo.smape.toFixed(2) + '%' : 'N/A'}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              MAPE: {typeof algo.mape === 'number' ? algo.mape.toFixed(2) + '%' : 'N/A'}
             </Typography>
 
             {algo.updated_at && (

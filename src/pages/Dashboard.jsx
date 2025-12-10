@@ -59,21 +59,15 @@ const Dashboard = ({ isAuthenticated, setIsAuthenticated }) => {
 
         <div className="content-area">
           <Routes>
-            {/* ---- NORMAL USER ROUTES ---- */}
             <Route path="/" element={<Overview />} />
             <Route path="/budget" element={<Budget />} />
             <Route path="/stock" element={<Stock />} />
-            <Route path="/stock/:ticker" element={<StockInsights />} />
+            <Route path="/stock/:ticker" element={<StockInsights />} />           
 
-             {/* Subscription flow */}
-           
-
-            {/* ---- MARKETPLACE ---- */}
             <Route path="/marketplace" element={<Marketplace />} />
             <Route path="/marketplace/create" element={<CreateListing />} />
             <Route path="/marketplace/edit/:id" element={<EditListing />} />
 
-            {/* Dynamic MUST stay last */}
             <Route path="/marketplace/:id" element={<AlgorithmDetails />} />
 
             {/* ---- ADMIN ROUTES (Protected) ---- */}

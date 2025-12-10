@@ -377,7 +377,7 @@ const Budget = () => {
   }, []);
 
   return (
-    <Box sx={{ padding: "20px", width: '100%', maxWidth: '100vw', minHeight: '100vh', overflowX: 'hidden', overflowY: 'auto', boxSizing: 'border-box' }}>
+    <Box sx={{ padding: "20px", paddingLeft: '100px', width: '100%', maxWidth: '100vw', minHeight: '100vh', overflowX: 'hidden', overflowY: 'auto', boxSizing: 'border-box' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
         <Typography variant="h4" gutterBottom>Budget Manager</Typography>
 
