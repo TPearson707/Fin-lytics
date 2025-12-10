@@ -13,6 +13,8 @@ import {
     Grid
 } from "@mui/material";
 import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import EmailIcon from '@mui/icons-material/Email';
+import GitHubIcon from '@mui/icons-material/GitHub';
 import ArrowBackIosIcon from '@mui/icons-material/ArrowBackIos';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 
@@ -24,26 +26,38 @@ const About = () => {
     const developers = [
         {
             name: "Lilly Ngo",
-            bio: "Computer Science major graduating Spring 2025. Focused on frontend development and user experience design for Fin-lytics.",
-            linkedin: "https://linkedin.com/in/ADD YOUR LINKED IN",
+            bio: "Focused on frontend development, UX design, and shaping the core application concept for Fin-lytics.",
+            grad: "Spring 2026",
+            linkedin: "https://www.linkedin.com/in/lillyn-g",
+            email: "wlillyngo@gmail.com",
+            github: "https://github.com/ngosterly",
             role: "Full-Stack Developer"
         },
         {
             name: "Hayden Komasz",
-            bio: "Software Engineering major graduating Spring 2025. Specialized in backend architecture and API development for financial data integration.",
-            linkedin: "https://linkedin.com/in/ADD YOUR LINKED IN",
-            role: "Full-Stack Dev."
+            bio: "Specialized in backend architecture, core database logic, and API development/integration.",
+            grad: "Spring 2026",
+            linkedin: "https://www.linkedin.com/in/hayden-komasz-37b938393",
+            email: "haydenkomasz@gmail.com",
+            github: "https://github.com/HaydenK19",
+            role: "Full-Stack Developer"
         },
         {
             name: "Adam Plankey",
-            bio: "Computer Science major graduating Spring 2025. Concentrated on AI/ML implementation and data analytics for stock prediction features.",
-            linkedin: "https://linkedin.com/in/ADD YOUR LINKED IN",
+            bio: "Concentrated on AI/ML implementation and data analytics for stock prediction features.",
+            grad: "Fall 2025",
+            linkedin: "https://www.linkedin.com/in/adam-plankey-23189226a/",
+            email: "adameplankey@gmail.com",
+            github: "https://github.com/adamplankey",
             role: "Backend Developer"
         },
         {
             name: "Thomas Pearson",
-            bio: "Software Engineering major graduating Spring 2025. Led full-stack development and system architecture design for the financial platform.",
-            linkedin: "https://linkedin.com/in/ADD YOUR LINKED IN",
+            bio: "Implemented key frontend–backend endpoints and contributed across the full stack.",
+            grad: "Spring 2026",
+            linkedin: "https://www.linkedin.com/in/thomas-pearson-b85ab122b/",
+            email: "pearson.e.thomas@gmail.com",
+            github: "https://github.com/TPearson707",
             role: "Full-Stack Developer"
         },
     ];
@@ -89,7 +103,6 @@ const About = () => {
             }}
         >
             <Container maxWidth="lg" sx={{ padding: "2rem 1rem" }}>
-            {/* Header Section */}
             <Box textAlign="center" mb={6}>
                 <Typography 
                     variant="h2" 
@@ -229,10 +242,22 @@ const About = () => {
                                                         color: isCenter ? '#749181' : '#666',
                                                         minHeight: isCenter ? '40px' : '32px',
                                                         fontSize: isCenter ? '1.5rem' : '1.1rem',
-                                                        mb: 1
+                                                        mb: 0.5
                                                     }}
                                                 >
                                                     {developer.name}
+                                                </Typography>
+                                                <Typography 
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: '#888',
+                                                        fontSize: isCenter ? '0.85rem' : '0.75rem',
+                                                        mb: 1.2,
+                                                        display: 'block',
+                                                        lineHeight: 1
+                                                    }}
+                                                >
+                                                    Graduates: {developer.grad}
                                                 </Typography>
                                                 
                                                 <Chip 
@@ -273,6 +298,7 @@ const About = () => {
                                                 <Box sx={{ 
                                                     display: 'flex',
                                                     justifyContent: 'center',
+                                                    gap: 2,
                                                     opacity: fadeIn ? 1 : 0.4,
                                                     transform: fadeIn ? 'translateY(0)' : 'translateY(10px)',
                                                     transition: 'all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) 0.2s'
@@ -298,6 +324,58 @@ const About = () => {
                                                                     color: '#005885',
                                                                     transform: 'scale(1.15)',
                                                                     filter: 'drop-shadow(0 2px 8px rgba(0, 119, 181, 0.3))'
+                                                                },
+                                                                transition: 'all 0.3s ease'
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                    <Box
+                                                        component="a"
+                                                        href={developer.github}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        sx={{ 
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            textDecoration: 'none'
+                                                        }}
+                                                    >
+                                                        <GitHubIcon
+                                                            sx={{ 
+                                                                color: '#23272f', // black/dark grey
+                                                                fontSize: 25,
+                                                                cursor: 'pointer',
+                                                                ml: 0.5,
+                                                                '&:hover': { 
+                                                                    color: '#444950', // lighter dark grey
+                                                                    transform: 'scale(1.15)',
+                                                                    filter: 'drop-shadow(0 2px 8px rgba(35, 39, 47, 0.18))'
+                                                                },
+                                                                transition: 'all 0.3s ease'
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                    <Box
+                                                        component="a"
+                                                        href={`mailto:${developer.email}`}
+                                                        sx={{ 
+                                                            display: 'inline-flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            textDecoration: 'none'
+                                                        }}
+                                                    >
+                                                        <EmailIcon
+                                                            sx={{ 
+                                                                color: '#ffb300', // orange/yellow
+                                                                fontSize: 25,
+                                                                cursor: 'pointer',
+                                                                ml: 0.5,
+                                                                '&:hover': { 
+                                                                    color: '#ff8f00', // darker orange
+                                                                    transform: 'scale(1.15)',
+                                                                    filter: 'drop-shadow(0 2px 8px rgba(255, 179, 0, 0.3))'
                                                                 },
                                                                 transition: 'all 0.3s ease'
                                                             }}
