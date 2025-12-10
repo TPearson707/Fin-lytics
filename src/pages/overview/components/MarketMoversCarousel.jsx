@@ -34,7 +34,7 @@ export default function MarketMoversCarousel({ gainers = [], losers = [], compac
               <col style={{ width: '24%' }} />
             </colgroup>
             <thead>
-              <tr style={{ background: 'rgba(245,248,255,0.7)' }}>
+              <tr style={{ background: '#fff' }}>
                 <th style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 700, fontSize: '1rem', letterSpacing: 0.5 }}>Ticker</th>
                 <th style={{ textAlign: 'right', padding: '6px 10px', fontWeight: 700, fontSize: '1rem', letterSpacing: 0.5 }}>Price</th>
                 <th style={{ textAlign: 'right', padding: '6px 10px', fontWeight: 700, fontSize: '1rem', letterSpacing: 0.5 }}>Chg</th>
@@ -43,7 +43,7 @@ export default function MarketMoversCarousel({ gainers = [], losers = [], compac
             </thead>
             <tbody>
               {movers[active].data.map((m, idx) => (
-                <tr key={idx} style={{ background: idx % 2 === 0 ? 'rgba(255,255,255,0.97)' : 'inherit' }}>
+                <tr key={idx} style={{ background: '#fff' }}>
                   <td style={{ textAlign: 'left', padding: '6px 10px', fontWeight: 600, letterSpacing: 1 }}>
                     <span title={m.name || m.symbol}>{m.symbol}</span>
                   </td>

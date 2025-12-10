@@ -33,7 +33,7 @@ export default function MarketOverview({ market }) {
       <Box sx={{ mb: 2 }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.95rem' }}>
           <thead>
-            <tr style={{ background: 'rgba(245,248,255,0.7)' }}>
+            <tr style={{ background: '#fff' }}>
               <th style={{ textAlign: 'left', padding: '4px 8px', fontWeight: 700 }}>Index</th>
               <th style={{ textAlign: 'right', padding: '4px 8px', fontWeight: 700 }}>Price</th>
               <th style={{ textAlign: 'right', padding: '4px 8px', fontWeight: 700 }}>Change (%)</th>
@@ -43,7 +43,7 @@ export default function MarketOverview({ market }) {
             {indices.map((i, idx) => {
               const isUp = i.change_percent >= 0;
               return (
-                <tr key={idx} style={{ background: idx % 2 === 0 ? 'rgba(255,255,255,0.95)' : 'inherit' }}>
+                <tr key={idx} style={{ background: '#fff' }}>
                   <td style={{ textAlign: 'left', padding: '4px 8px', fontWeight: 600 }}>
                     <span title={i.index}>
                       {(i.index === 'Dow Jones Industrial Average' || i.ticker === 'Dow Jones Industrial Average') ? 'DJIA' : (i.ticker || i.index)}

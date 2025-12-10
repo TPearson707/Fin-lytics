@@ -63,9 +63,9 @@ export default function Overview() {
         sx={{
           width: '100%',
           maxWidth: 1200,
-          background: 'rgba(255,255,255,0.97)',
+          background: '#fff',
           borderRadius: 2,
-          boxShadow: '0 2px 16px 0 rgba(60,72,100,0.08)',
+          boxShadow: 'none',
           p: { xs: 1, sm: 2 },
           mb: 1,
         }}

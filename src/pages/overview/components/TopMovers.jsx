@@ -22,7 +22,7 @@ export default function TopMovers({ movers, small }) {
       <div style={{ width: '100%' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: small ? '0.93rem' : '1rem', tableLayout: 'auto' }}>
           <thead>
-            <tr style={{ background: 'rgba(245,248,255,0.7)' }}>
+            <tr style={{ background: '#fff' }}>
               <th style={{ textAlign: 'left', padding: '4px 5px', fontWeight: 700 }}>Ticker</th>
               <th style={{ textAlign: 'right', padding: '4px 8px', fontWeight: 700 }}>Price</th>
               <th style={{ textAlign: 'right', padding: '4px 8px', fontWeight: 700 }}>Change</th>
@@ -32,7 +32,7 @@ export default function TopMovers({ movers, small }) {
             {movers.map((m, idx) => {
               const isUp = m.change_value >= 0;
               return (
-                <tr key={idx} style={{ background: idx % 2 === 0 ? 'rgba(255,255,255,0.97)' : 'inherit' }}>
+                <tr key={idx} style={{ background: '#fff' }}>
                   <td style={{ textAlign: 'left', padding: '4px 8px', fontWeight: 700 }} title={m.name}>{m.symbol}</td>
                   <td style={{ textAlign: 'right', padding: '4px 8px', fontVariantNumeric: 'tabular-nums', maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>${m.price?.toFixed(2) ?? '-'}</td>
                   <td style={{ textAlign: 'right', padding: '4px 8px', fontWeight: 600, color: isUp ? '#388e3c' : '#d32f2f', fontVariantNumeric: 'tabular-nums', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
