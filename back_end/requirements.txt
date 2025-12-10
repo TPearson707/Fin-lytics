@@ -19,3 +19,4 @@ polygon-api-client
 python-dateutil
 autogluon
 stripe
+pandas_market_calendars
