@@ -1,21 +1,47 @@
 .dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: #fff;
+
+  // top navbar height offset
+  .main-content {
     display: flex;
-    flex-direction: column; 
-    height: 100vh;
-    
-    .navbar {
-       border: 1px solid #e7e7e7;
-    }
+    flex: 1;
+    padding-top: 64px; // match DbNavbar height
+  }
 
-    .main-content {
-        display: flex; 
-        flex: 1; 
-    }
+  .MuiDrawer-root {
+    position: fixed !important;
+    top: 64px;
+    left: 0;
+    height: calc(100vh - 64px);
+    z-index: 1100;
+  }
 
-    .content-area {
-        margin-right: 25px;
-        padding: 15px;
-        overflow-y: auto; 
-        flex: 1; 
-    }
+  // content area beside the drawer
+  .content-area {
+    flex: 1;
+    margin-left: 180px; // 👈 matches Drawer width
+    padding: 24px;
+    overflow-y: auto;
+    transition: margin-left 0.3s ease;
+  }
+
+  .content-area::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .content-area::-webkit-scrollbar-track {
+    background: #e0e0e0;
+  }
+
+  .content-area::-webkit-scrollbar-thumb {
+    background-color: #b0b0b0;
+    border-radius: 4px;
+  }
+
+  .content-area::-webkit-scrollbar-thumb:hover {
+    background-color: #8a8a8a;
+  }
 }

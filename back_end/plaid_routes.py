@@ -21,6 +21,7 @@ from models import Users, Plaid_Bank_Account, Plaid_Transactions, User_Categorie
 from datetime import datetime, timedelta
 from datetime import date
 from user_categories import create_user_category, UserCategoryCreate
+from category_colors import get_category_color
 import requests
 import json
 
@@ -221,10 +222,26 @@ def fetch_and_store_transactions(db: Session, decrypted_access_token: str):
                     .first()
                 )
 
-                # If the category doesn't exist, create it
                 if not user_category:
                     try:
-                        category_data = UserCategoryCreate(name=category, color="#000000", weekly_limit=None)
+                        # assign colors based on category names
+                        category_colors = {
+                            'food': '#FF6B6B',           # Red
+                            'transportation': '#4ECDC4', # Teal
+                            'utilities': '#45B7D1',      # Blue
+                            'entertainment': '#96CEB4',  # Green
+                            'shopping': '#FFEAA7',       # Yellow
+                            'healthcare': '#DDA0DD',     # Plum
+                            'education': '#98D8C8',      # Mint
+                            'travel': '#F7DC6F',         # Light Yellow
+                            'other': '#95A5A6',          # Gray
+                            'recurring': '#E17055',      # Orange
+                            'subscription': '#E17055',   # Orange
+                        }
+                        
+                        assigned_color = category_colors.get(category.lower(), '#9E9E9E')  # Default gray
+                        
+                        category_data = UserCategoryCreate(name=category, color=assigned_color, weekly_limit=None)
                         user_category = create_user_category(user_id, category_data, db)
                         db.flush()  # Flush to get the category ID
                     except HTTPException:
@@ -449,7 +466,10 @@ async def refresh_bank_data(
                 # If the category doesn't exist, create it
                 if not user_category:
                     try:
-                        category_data = UserCategoryCreate(name=category, color="#000000", weekly_limit=None)
+                        # Get color using shared utility
+                        assigned_color = get_category_color(category)
+                        
+                        category_data = UserCategoryCreate(name=category, color=assigned_color, weekly_limit=None)
                         user_category = create_user_category(user_id, category_data, db)
                         db.flush()  # Flush to get the category ID
                     except HTTPException:

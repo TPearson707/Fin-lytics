@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import "../../styles/pages/about.scss";
 import { 
     Box, 
     Typography, 
@@ -93,7 +92,7 @@ const About = () => {
     return (
         <Box 
             sx={{ 
-                background: 'linear-gradient(135deg, #fdfefd 0%, #fbfcfb 50%, #fcfdfc 100%)',
+                background: '#fff',
                 minHeight: '100vh',
                 py: 4,
                 backgroundAttachment: 'fixed',
@@ -126,14 +125,11 @@ const About = () => {
                 sx={{ 
                     mb: 6,
                     borderRadius: 3,
-                    background: 'rgba(255, 255, 255, 0.95)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(116, 145, 129, 0.2)',
-                    transition: 'all 0.3s ease',
-                    '&:hover': {
-                        transform: 'translateY(-2px)',
-                        boxShadow: '0 8px 32px rgba(116, 145, 129, 0.15)'
-                    }
+                    background: '#fff',
+                    backdropFilter: 'none',
+                    border: 'none',
+                    transition: 'none',
+                    boxShadow: 'none',
                 }}
             >
                 <CardContent sx={{ p: 4 }}>
@@ -176,37 +172,16 @@ const About = () => {
                                                 flex: '0 0 280px',
                                                 height: isCenter ? '320px' : '280px',
                                                 borderRadius: 4,
-                                                background: isCenter 
-                                                    ? 'linear-gradient(135deg, #ffffff 0%, #f8fcf9 50%, #f0f7f2 100%)'
-                                                    : 'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)',
-                                                border: isCenter ? '3px solid rgba(116, 145, 129, 0.5)' : '2px solid rgba(116, 145, 129, 0.3)',
-                                                transition: 'all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
-                                                transform: `
-                                                    scale(${isCenter ? 1.03 : 0.92}) 
-                                                    translateX(${cardSlideDirection * 10}px) 
-                                                    translateY(${isCenter ? '-3px' : '8px'})
-                                                    rotateY(${cardSlideDirection * 3}deg)
-                                                `,
-                                                opacity: isCenter ? 1 : 0.85,
+                                                background: '#fff',
+                                                border: 'none',
+                                                transition: 'none',
+                                                transform: `scale(1) translateX(0px) translateY(0px) rotateY(0deg)`,
+                                                opacity: 1,
                                                 cursor: 'pointer',
                                                 overflow: 'visible',
-                                                boxShadow: isCenter 
-                                                    ? '0 12px 36px rgba(116, 145, 129, 0.25), 0 0 0 1px rgba(116, 145, 129, 0.1)'
-                                                    : '0 6px 20px rgba(0, 0, 0, 0.12)',
+                                                boxShadow: 'none',
                                                 zIndex: isCenter ? 10 : 5,
                                                 transformStyle: 'preserve-3d',
-                                                '&:hover': {
-                                                    transform: `
-                                                        scale(${isCenter ? 1.04 : 0.94}) 
-                                                        translateX(${cardSlideDirection * 8}px) 
-                                                        translateY(${isCenter ? '-5px' : '5px'})
-                                                        rotateY(${cardSlideDirection * 2}deg)
-                                                    `,
-                                                    opacity: 1,
-                                                    boxShadow: isCenter 
-                                                        ? '0 16px 48px rgba(116, 145, 129, 0.3), 0 0 0 1px rgba(116, 145, 129, 0.2)'
-                                                        : '0 8px 28px rgba(116, 145, 129, 0.18)'
-                                                }
                                             }}
                                             onClick={() => {
                                                 if (!isCenter) {

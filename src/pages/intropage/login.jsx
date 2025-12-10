@@ -56,7 +56,7 @@ const LoginBlock = ({ isSigningUp: initialSigningUp, setIsAuthenticated }) => {
             console.log("Login successful:", loginResponse.data);
             localStorage.setItem("token", loginResponse.data.access_token);
             setIsAuthenticated(true);
-            navigate("/dashboard");
+            navigate("/");
         } catch (error) {
             console.error(
                 "Authentication error:",

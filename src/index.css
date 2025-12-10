@@ -1,1 +1,29 @@
+* {
+	background: #fff !important;
+}
+.MuiBox-root {
+	background: #fff !important;
+}
+
+#root > * {
+	background: #fff !important;
+}
 /* @import "tailwindcss"; */
+html, body, #root {
+	height: 100%;
+	background: #fff !important;
+}
+
+.MuiPaper-root {
+	background: #fff !important;
+	box-shadow: none !important;
+}
+
+.MuiBackdrop-root {
+	position: fixed !important;
+	top: 0 !important;
+	left: 0 !important;
+	right: 0 !important;
+	bottom: 0 !important;
+	background-color: rgba(0, 0, 0, 0) !important;
+}

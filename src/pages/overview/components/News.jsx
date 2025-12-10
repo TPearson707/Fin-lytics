@@ -11,6 +11,7 @@ export default function News({ news }) {
   }
 
   const topStory = news[0];
+  const additionalStories = news.slice(1, 5);
 
   return (
     <Paper elevation={2} sx={{ p: 2 }}>
@@ -18,24 +19,39 @@ export default function News({ news }) {
       <Divider sx={{ mb: 2 }} />
 
       {/* Highlighted top story */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: 2, background: 'rgba(240,248,255,0.5)', borderRadius: 2, p: 2 }}>
         <Link href={topStory.url} target="_blank" rel="noopener" underline="hover">
           <Typography variant="subtitle1" color="primary" fontWeight="bold">
             {topStory.title}
           </Typography>
         </Link>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
           {topStory.site} · {new Date(topStory.publishedDate).toLocaleDateString()}
         </Typography>
+        {topStory.description && (
+          <Typography variant="body2" color="text.primary" sx={{ fontStyle: 'italic' }}>
+            {topStory.description}
+          </Typography>
+        )}
       </Box>
 
       {/* Additional stories */}
       <List dense>
-        {news.slice(1, 4).map((n, idx) => (
-          <ListItem key={idx} disableGutters>
-            <Link href={n.url} target="_blank" rel="noopener" underline="hover" color="text.primary">
-              <Typography variant="body2">• {n.title}</Typography>
-            </Link>
+        {additionalStories.map((n, idx) => (
+          <ListItem key={idx} disableGutters sx={{ mb: 1 }}>
+            <Box sx={{ width: '100%' }}>
+              <Link href={n.url} target="_blank" rel="noopener" underline="hover" color="text.primary">
+                <Typography variant="body2" fontWeight={600}>{n.title}</Typography>
+              </Link>
+              <Typography variant="caption" color="text.secondary">
+                {n.site} · {new Date(n.publishedDate).toLocaleDateString()}
+              </Typography>
+              {n.description && (
+                <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
+                  {n.description}
+                </Typography>
+              )}
+            </Box>
           </ListItem>
         ))}
       </List>

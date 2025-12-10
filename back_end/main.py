@@ -1,7 +1,11 @@
 from fastapi import FastAPI, status, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from dotenv import load_dotenv
 import models
+
+# Load environment variables at startup
+load_dotenv()
 import plaid_routes
 from database import engine, SessionLocal
 from typing import Annotated
@@ -18,6 +22,7 @@ import user_balances
 import user_transactions
 import entered_transactions
 import balance_routes
+import budget_goals
 import stripe_routes
 from startup import initialize_prediction_service, cleanup_prediction_service
 
@@ -58,6 +63,7 @@ app.include_router(user_balances.router)
 app.include_router(user_transactions.router)
 app.include_router(entered_transactions.router)
 app.include_router(balance_routes.router)
+app.include_router(budget_goals.router)
 app.include_router(stripe_routes.router)
 
 

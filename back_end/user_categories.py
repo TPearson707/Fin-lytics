@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Annotated
 from database import SessionLocal
 from models import User_Categories, Users
+from auth import get_current_user
 from pydantic import BaseModel
 
 router = APIRouter(
@@ -62,7 +63,12 @@ def create_user_category(user_id: int, data: UserCategoryCreate, db: Session):
     db.commit()
     db.refresh(new_category)
 
-    return new_category
+    return {
+        "id": new_category.id,
+        "name": new_category.name,
+        "color": new_category.color,
+        "weekly_limit": new_category.weekly_limit
+    }
 
 def update_user_category(category_id: int, data: UserCategoryUpdate, db: Session):
     category = db.query(User_Categories).filter(User_Categories.id == category_id).first()
@@ -102,18 +108,52 @@ def delete_user_category(category_id: int, db: Session):
     return {"message": "Category deleted successfully"}
 
 # ==================== Routes ====================
+@router.get("/", status_code=status.HTTP_200_OK)
+async def get_current_user_categories(
+    user: Annotated[dict, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    return get_user_categories(user["id"], db)
+
 @router.get("/{user_id}", status_code=status.HTTP_200_OK)
 async def get(user_id: int, db: Session = Depends(get_db)):
     return get_user_categories(user_id, db)
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
-async def create(data: UserCategoryCreate, db: Session = Depends(get_db)):
-    return create_user_category(data.user_id, data, db)
+async def create(
+    data: UserCategoryCreate,
+    user: Annotated[dict, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    return create_user_category(user["id"], data, db)
 
 @router.put("/{category_id}", status_code=status.HTTP_200_OK)
-async def update(category_id: int, data: UserCategoryUpdate, db: Session = Depends(get_db)):
+async def update(
+    category_id: int, 
+    data: UserCategoryUpdate,
+    user: Annotated[dict, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    # Verify the category belongs to the current user
+    category = db.query(User_Categories).filter(User_Categories.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if category.user_id != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
     return update_user_category(category_id, data, db)
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete(category_id: int, db: Session = Depends(get_db)):
+async def delete(
+    category_id: int,
+    user: Annotated[dict, Depends(get_current_user)],
+    db: Session = Depends(get_db)
+):
+    # Verify the category belongs to the current user
+    category = db.query(User_Categories).filter(User_Categories.id == category_id).first()
+    if not category:
+        raise HTTPException(status_code=404, detail="Category not found")
+    if category.user_id != user["id"]:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
     return delete_user_category(category_id, db)

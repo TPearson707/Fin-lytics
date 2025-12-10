@@ -3,7 +3,7 @@ import React, { useState, useEffect, createContext } from "react";
 import axios from "axios";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { muiTheme } from './theme'; 
+import { muiTheme } from './theme/theme'; 
 
 import Intropage from "./pages/intropage/Intropage";
 import Dashboard from "./pages/Dashboard";

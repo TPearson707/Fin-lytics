@@ -39,6 +39,8 @@ class Users(Base):
         back_populates="user",
         cascade="all, delete-orphan"
     )
+    # Note: budget_goals relationship removed due to FK constraint restrictions
+    # Handle at application level instead
     balances = relationship(
         "User_Balance",
         back_populates="user",
@@ -55,6 +57,7 @@ class Settings(Base):
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey("Users.id", ondelete="CASCADE"), unique=True, nullable=False)
     email_notifications = Column(Boolean, default=False)
+    # sms_notifications = Column(Boolean, default=False)
     push_notifications = Column(Boolean, default=False)
 
 
@@ -94,7 +97,16 @@ class Plaid_Transactions(Base):
     category = Column(String(100))
     merchant_name = Column(String(255))
     date = Column(Date)
-    frequency = Column(String(20), nullable=True)  # For recurring transactions: 'weekly', 'monthly', etc.
+    
+    is_recurring = Column(Boolean, default=False)
+    frequency_type = Column(String(20), nullable=True)  # 'weekly', 'monthly', 'yearly'
+    week_day = Column(String(20), nullable=True)  # For weekly: 'monday', 'tuesday', etc.
+    month_day = Column(Integer, nullable=True)  # For monthly: 1-31
+    year_month = Column(Integer, nullable=True)  # For yearly: 1-12
+    year_day = Column(Integer, nullable=True)  # For yearly: 1-31
+    end_date = Column(Date, nullable=True)  # When recurring should stop
+    parent_transaction_id = Column(String(50), nullable=True)  # Links to original recurring transaction
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     bank_account = relationship("Plaid_Bank_Account", back_populates="transactions")
     transaction_categories = relationship(
@@ -200,6 +212,26 @@ class Save_Goals(Base):
     def __repr__(self):
         return f"<Save_Goals(goal_id={self.goal_id}, goal_name={self.goal_name}, user_id={self.user_id})>"
 
+class Budget_Goals(Base):
+    __tablename__ = "Budget_Goals"
+
+    id = Column(Integer, primary_key=True, autoincrement=True, index=True)
+    user_id = Column(Integer, nullable=False)  # Removed ForeignKey constraint
+    goal_type = Column(String(50), nullable=False)  # 'annual' or 'category'
+    goal_name = Column(String(100), nullable=False)
+    goal_amount = Column(Float, nullable=False)
+    time_period = Column(String(50), nullable=True)  # 'monthly' for categories, 'yearly' for annual
+    category_name = Column(String(100), nullable=True)  # for category-based goals
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+    # Note: No SQLAlchemy relationship due to FK constraint restrictions
+    # Handle user validation at application level
+
+    def __repr__(self):
+        return f"<Budget_Goals(id={self.id}, goal_type={self.goal_type}, goal_name={self.goal_name}, user_id={self.user_id})>"
+
 class User_Balance(Base):
     __tablename__ = "User_Balance"
 
@@ -222,6 +254,14 @@ class User_Transactions(Base):
             "amount": self.amount,
             "description": self.description,
             "category_id": self.category_id,
+            "is_recurring": self.is_recurring,
+            "frequency_type": self.frequency_type,
+            "week_day": self.week_day,
+            "month_day": self.month_day,
+            "year_month": self.year_month,
+            "year_day": self.year_day,
+            "end_date": self.end_date.isoformat() if self.end_date else None,
+            "parent_transaction_id": self.parent_transaction_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
     __tablename__ = "User_Transactions"
@@ -232,6 +272,17 @@ class User_Transactions(Base):
     amount = Column(Float, nullable=False)
     description = Column(String(255), nullable=True)
     category_id = Column(Integer, ForeignKey("User_Categories.id", ondelete="CASCADE"), nullable=False)
+    
+    # Recurring transaction fields
+    is_recurring = Column(Boolean, default=False)
+    frequency_type = Column(String(20), nullable=True)  # 'weekly', 'monthly', 'yearly'
+    week_day = Column(String(20), nullable=True)  # For weekly: 'monday', 'tuesday', etc.
+    month_day = Column(Integer, nullable=True)  # For monthly: 1-31
+    year_month = Column(Integer, nullable=True)  # For yearly: 1-12
+    year_day = Column(Integer, nullable=True)  # For yearly: 1-31
+    end_date = Column(Date, nullable=True)  # When recurring should stop
+    parent_transaction_id = Column(Integer, nullable=True)  # Links to original recurring transaction
+    
     created_at = Column(DateTime, default=datetime.utcnow)
     user_transaction_links = relationship(
         "User_Transaction_Category_Link",

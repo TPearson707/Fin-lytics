@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import Sidebar from "../components/common/Sidebar";
 import DbNavbar from "../components/common/commonNavBar";
-import "./Dashboard.scss";
+import "../styles/pages/dashboard/Dashboard.scss";
 import Budget from "./budget/budget";
 import Overview from "./overview/Overview";
 import Stock from "./stock/stock";

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Paper, Box, Typography, Divider } from '@mui/material';
 
-export default function Summary({ summary }) {
+export default function Summary({ summary, children }) {
   if (!summary) {
     return (
       <Paper elevation={2} sx={{ p: 2 }}>
@@ -27,6 +27,9 @@ export default function Summary({ summary }) {
           Total Gain: +${summary.total_gain.toLocaleString()} (+{summary.total_gain_percent}%)
         </Typography>
       </Box>
+
+      {/* Render children below summary content, e.g. TopMovers */}
+      {children && <Box sx={{ mt: 2 }}>{children}</Box>}
 
       <Divider sx={{ my: 2 }} />
 

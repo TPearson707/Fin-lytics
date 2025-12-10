@@ -1,3 +1,40 @@
+def fetch_market_losers():
+    """Fetch top market losers from FMP."""
+    try:
+        url = f"{FMP_BASE_URL}/stock_market/losers"
+        params = {"apikey": FMP_API_KEY}
+        res = requests.get(url, params=params, timeout=10)
+        res.raise_for_status()
+        data = res.json()
+
+        cleaned = []
+        for d in data:
+            try:
+                price = float(d.get("price", 0))
+                change = float(d.get("change", 0))
+                pct = float(str(d.get("changesPercentage", "0")).replace("%", "").replace("+", ""))
+                symbol = d.get("symbol", "").upper()
+                name = d.get("name") or symbol
+                if not symbol or "ETF" in name or any(x in symbol for x in ["/", "="]):
+                    continue
+                cleaned.append({
+                    "symbol": symbol,
+                    "name": name,
+                    "price": round(price, 2),
+                    "change": round(change, 2),
+                    "change_percent": round(pct, 2)
+                })
+            except (TypeError, ValueError):
+                continue
+
+        # prioritize high/mid/low price tiers
+        high = [x for x in cleaned if x["price"] >= 80]
+        mid = [x for x in cleaned if 20 <= x["price"] < 80]
+        low = [x for x in cleaned if x["price"] < 20]
+        return (high + mid + low)[:5]
+    except Exception as e:
+        print("Error fetching market losers:", e)
+        return []
 import os
 import requests
 from fastapi import APIRouter, Depends, HTTPException
@@ -152,25 +189,47 @@ async def get_dashboard_overview(
         }
 
         # --- 3. Top Movers (Portfolio) ---
-        top = sorted(
-            holdings,
-            key=lambda h: getattr(h, "price", 0) * getattr(h, "quantity", 0),
-            reverse=True
-        )[:3]
-        top_movers = [
-            {
+        def fetch_yesterday_close(symbol):
+            try:
+                url = f"{FMP_BASE_URL}/historical-price-full/{symbol}?serietype=line&apikey={FMP_API_KEY}&timeseries=2"
+                res = requests.get(url, timeout=8)
+                res.raise_for_status()
+                data = res.json()
+                hist = data.get("historical", [])
+                if len(hist) >= 2:
+                    return float(hist[1]["close"])
+                elif len(hist) == 1:
+                    return float(hist[0]["close"])
+                else:
+                    return None
+            except Exception:
+                return None
+
+        movers = []
+        for h in holdings:
+            if not h.symbol or not h.price:
+                continue
+            yclose = fetch_yesterday_close(h.symbol)
+            if yclose is None or yclose == 0:
+                continue
+            change_value = round(h.price - yclose, 2)
+            change_percent = round(((h.price - yclose) / yclose) * 100, 2)
+            movers.append({
                 "symbol": h.symbol,
                 "name": h.name,
-                "change_value": round((h.price or 0) * 0.05, 2),  # Mock 5% gain
-                "change_percent": 5.0,
-            }
-            for h in top
-        ]
+                "price": h.price,
+                "change_value": change_value,
+                "change_percent": change_percent,
+            })
+
+        # Sort by absolute percent change, then value
+        top_movers = sorted(movers, key=lambda m: abs(m["change_percent"]), reverse=True)[:3]
 
         # --- 4. Market overview (Indices + Gainers) ---
         market_overview = {
             "indices": fetch_market_indices(),
-            "gainers": fetch_market_gainers()
+            "gainers": fetch_market_gainers(),
+            "losers": fetch_market_losers()
         }
 
         # --- 5. News Feed ---

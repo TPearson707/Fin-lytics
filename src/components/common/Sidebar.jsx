@@ -22,10 +22,7 @@ import {
 import { styled } from "@mui/system";
 import axios from "axios";
 
-const StyledListItem = styled(({ button, ...otherProps }) => {
-  const { component: Component = "div", ...rest } = otherProps;
-  return <ListItem {...rest} component={Component} />;
-})(({ theme }) => ({
+const StyledListItem = styled(ListItem)(({ theme }) => ({
   color: "white",
   transition: "background-color 0.3s, transform 0.2s",
   "&:hover": {
@@ -107,11 +104,10 @@ const Sidebar = ({ setIsAuthenticated }) => {
           },
         }}
       >
-        {/* Spacer for Navbar */}
         <Toolbar />
         <Box sx={{ overflow: "hidden" }}>
           <List>
-            <StyledListItem button component={Link} to="/">
+            <StyledListItem component={Link} to="/">
               <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
                 <BackupTableIcon />
               </ListItemIcon>
@@ -119,7 +115,7 @@ const Sidebar = ({ setIsAuthenticated }) => {
                 primary={<Typography sx={{ fontSize: "1rem" }}>Overview</Typography>}
               />
             </StyledListItem>
-            <StyledListItem button component={Link} to="/Stock">
+            <StyledListItem component={Link} to="/Stock">
               <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
                 <AutoGraphIcon />
               </ListItemIcon>
@@ -127,7 +123,7 @@ const Sidebar = ({ setIsAuthenticated }) => {
                 primary={<Typography sx={{ fontSize: "1rem" }}>Stock AI</Typography>}
               />
             </StyledListItem>
-            <StyledListItem button component={Link} to="/Budget">
+            <StyledListItem component={Link} to="/Budget">
               <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
                 <AccountBalanceIcon />
               </ListItemIcon>

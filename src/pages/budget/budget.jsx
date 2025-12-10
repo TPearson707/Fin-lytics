@@ -4,17 +4,25 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import "../../styles/pages/dashboard/budget-page/budget.scss";
 import axios from "axios";
 import VisualCard from "./cards/visual-data.jsx";
 import ProjectionsCard from "./cards/projections.jsx";
-import FinancialCalendar from "../budget/WeeklyOverview.jsx";
+import FinancialCalendar from "./cards/WeeklyOverview.jsx";
 import TransactionCard from "./cards/transactions.jsx";
 import EditTransactions from "./popups/edit-transactions.jsx";
 import ManageBudgets from "./popups/man-budget.jsx";
 import EditAccounts from "./popups/edit-acc.jsx";
 import { useNavigate } from "react-router-dom";
 
+//utility function for consistent currency formatting across budget components
+export const formatCurrency = (value) => {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(value || 0);
+};
 
 const QuickAccess = ({ onEditTransactions, onManageBudgets, onEditAccounts }) => {
   return (
@@ -117,7 +125,7 @@ const MyAccounts = ({ refreshTrigger = 0 }) => {
               <ListItem>
                 <ListItemText
                   primary={accountType.charAt(0).toUpperCase() + accountType.slice(1)}
-                  secondary={`$${(data.balance_amount || 0).toFixed(2)}`}
+                  secondary={formatCurrency(data.balance_amount || 0)}
                 />
               </ListItem>
               <Divider />
@@ -349,6 +357,24 @@ const Budget = () => {
   const handleBalanceUpdate = () => {
     setRefreshTrigger(prev => prev + 1);
   };
+
+  // Define refreshCurrentRange function
+  const refreshCurrentRange = () => {
+    console.log('Refresh triggered');
+    // Add logic to refresh the Financial Calendar or other components
+  };
+
+  // Listen for budget modal open event from ProjectionsCard
+  useEffect(() => {
+    const handleOpenBudgetModal = () => {
+      setIsManageBudgetsOpen(true);
+    };
+
+    window.addEventListener('openBudgetModal', handleOpenBudgetModal);
+    return () => {
+      window.removeEventListener('openBudgetModal', handleOpenBudgetModal);
+    };
+  }, []);
 
   return (
     <Box sx={{ padding: "20px", width: '100%', maxWidth: '100vw', minHeight: '100vh', overflowX: 'hidden', overflowY: 'auto', boxSizing: 'border-box' }}>

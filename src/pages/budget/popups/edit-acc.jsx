@@ -61,11 +61,10 @@ const EditAccounts = ({ open, onClose, onBalanceUpdate }) => {
                 const data = await response.json();
                 console.log('Fetched balance data:', data);
                 
-                // Set balances from unified endpoint
                 setBalances({
                     checking: data.manual_balances?.checking || 0,
                     savings: data.manual_balances?.savings || 0,
-                    cash: data.cash_balance || 0,  // Cash comes from separate field
+                    cash: data.cash_balance || 0,  
                 });
                 console.log('Updated UI balances:', {
                     checking: data.manual_balances?.checking || 0,
@@ -73,14 +72,12 @@ const EditAccounts = ({ open, onClose, onBalanceUpdate }) => {
                     cash: data.cash_balance || 0,
                 });
 
-                // Set Plaid status from unified endpoint
                 setUserPlaidStatus({
                     hasPlaid: data.has_plaid || false,
                     balancesEditable: data.balances_editable || false
                 });
             } else if (response.status === 401) {
                 console.error('Authentication failed - user not logged in');
-                // You might want to redirect to login or show an auth error
             } else {
                 console.error('Failed to fetch balances - status:', response.status);
             }

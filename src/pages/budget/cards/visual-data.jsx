@@ -13,6 +13,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 const VisualCard = () => {
     const [pieChartData, setPieChartData] = useState(null);
     const [error, setError] = useState(null);
+    const [categoryColors, setCategoryColors] = useState({});
 
     const getUserIdFromToken = () => {
         const token = localStorage.getItem("token");
@@ -26,13 +27,42 @@ const VisualCard = () => {
         }
     };
 
-    const fetchPieChartData = () => {
+    const fetchCategoryColors = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            if (!token) return {};
+            
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const userId = payload.id;
+            
+            const response = await axios.get(`http://localhost:8000/user_categories/${userId}`, {
+                headers: { Authorization: `Bearer ${token}` },
+                withCredentials: true,
+            });
+            
+            const colorMap = {};
+            response.data.forEach(category => {
+                colorMap[category.name] = category.color;
+            });
+            console.log('Pie Chart: Fetched category colors:', colorMap);
+            setCategoryColors(colorMap);
+            return colorMap;
+        } catch (error) {
+            console.error('Error fetching category colors:', error);
+            return {};
+        }
+    };
+
+    const fetchPieChartData = async () => {
         const userId = getUserIdFromToken();
         if (!userId) {
             setError("User ID not found. Please log in.");
             return;
         }
 
+        // fetch category colors first, then pie chart data
+        const colors = await fetchCategoryColors();
+        
         axios.get(`http://localhost:8000/pie_chart/${userId}`)
             .then((response) => {
                 const data = response.data;
@@ -42,25 +72,34 @@ const VisualCard = () => {
                     return;
                 }
 
-                // Transform the data into the format for react-chartjs-2
+                const fallbackColors = [
+                    "#5f8f6a8e", "#A9B8A4", "#6B7C56", "#C4D2B0", "#D1C6A1",
+                    "#B4A798", "#4E7A5F", "#6A9A72", "#588868", "#3F6E53",
+                    "#62876A", "#B2C3AE", "#9FAC9B", "#BCCBB9", "#A3B49F",
+                    "#C0D1BC", "#5F6F4C", "#758B61", "#667B52", "#7C8D69",
+                    "#586A46", "#D0DEC2", "#BBD1A6", "#C9D8B5", "#D3E0C4",
+                    "#D6E3CC", "#DDD2AF", "#C9BC9B", "#E1D7BA", "#D9CCA8",
+                    "#BFB38C", "#C1B2A3", "#A9998B", "#B7A99A", "#CBBBAE",
+                    "#AD9E90",
+                ];
+
+                const backgroundColor = Object.keys(data).map((categoryName, index) => {
+                    const color = colors[categoryName] || fallbackColors[index % fallbackColors.length];
+                    console.log('Pie Chart: Mapping category:', categoryName, 'to color:', color);
+                    return color;
+                });
+
                 const chartData = {
                     labels: Object.keys(data),
                     datasets: [
                         {
                             label: "Category Distribution",
                             data: Object.values(data), 
-                            backgroundColor: [
-                                "#5f8f6a8e", "#A9B8A4", "#6B7C56", "#C4D2B0", "#D1C6A1",
-                                "#B4A798", "#4E7A5F", "#6A9A72", "#588868", "#3F6E53",
-                                "#62876A", "#B2C3AE", "#9FAC9B", "#BCCBB9", "#A3B49F",
-                                "#C0D1BC", "#5F6F4C", "#758B61", "#667B52", "#7C8D69",
-                                "#586A46", "#D0DEC2", "#BBD1A6", "#C9D8B5", "#D3E0C4",
-                                "#D6E3CC", "#DDD2AF", "#C9BC9B", "#E1D7BA", "#D9CCA8",
-                                "#BFB38C", "#C1B2A3", "#A9998B", "#B7A99A", "#CBBBAE",
-                                "#AD9E90",
-                            ],
-                            borderColor: "#4B6F44",
-                            borderWidth: 1,
+                            backgroundColor: backgroundColor,
+                            borderColor: backgroundColor.map(color => {
+                                return color.startsWith('#') ? color : '#4B6F44';
+                            }),
+                            borderWidth: 2,
                         },
                     ],
                 };
@@ -93,29 +132,29 @@ const VisualCard = () => {
         },
     };
 
-    const refreshBankData = async () => {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+    // const refreshBankData = async () => {
+    //     const token = localStorage.getItem("token");
+    //     if (!token) return;
 
-        try {
-            await axios.post("http://localhost:8000/refresh_bank_data", {}, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            // refresh pie chart data after bank data refresh
-            setTimeout(() => fetchPieChartData(), 1000);
-        } catch (err) {
-            console.error("Error refreshing bank data:", err);
-        }
-    };
+    //     try {
+    //         await axios.post("http://localhost:8000/refresh_bank_data", {}, {
+    //             headers: { Authorization: `Bearer ${token}` }
+    //         });
+    //         // refresh pie chart data after bank data refresh
+    //         setTimeout(() => fetchPieChartData(), 1000);
+    //     } catch (err) {
+    //         console.error("Error refreshing bank data:", err);
+    //     }
+    // };
 
     return (
         <Box sx={{ p: 2 }} className="visual-card">
             <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 {/* <Typography variant="h6">Data Analytics</Typography> */}
                 <Typography variant="caption" color="text.secondary">Category distribution</Typography>
-                <button onClick={refreshBankData} style={{ fontSize: '10px', padding: '4px 8px' }}>
+                {/* <button onClick={refreshBankData} style={{ fontSize: '10px', padding: '4px 8px' }}>
                     Refresh Data
-                </button>
+                </button> */}
             </Box>
 
             {!pieChartData && !error && (
