@@ -1,10 +1,15 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Box, Container, Typography, Button, Paper, Table, TableHead, TableRow, TableCell, TableBody, CircularProgress } from "@mui/material";
-import SymbolOverviewChart from "../../components/common/tradingview/SymbolOverviewChart";
+import {
+  Box, Container, Typography, Button, Paper, Table,
+  TableHead, TableRow, TableCell, TableBody, CircularProgress
+} from "@mui/material";
+
 import SearchBar from "../../components/common/SearchBar";
+import SymbolOverviewChart from "../../components/common/tradingview/SymbolOverviewChart";
 import StockInfoPanel from "./components/StockInfoPanel";
 import StockOscillatorsPanel from "./components/StockOscillatorsPanel";
+import api from "../../api";
 
 function StockInsights() {
   const { ticker } = useParams();
@@ -12,90 +17,72 @@ function StockInsights() {
 
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [resolvedSymbol, setResolvedSymbol] = useState(null);
-
-  const goBack = () => navigate("/stock");
-
-  const fetchResolvedSymbol = async () => {
-    try {
-      const res = await fetch(`http://localhost:8000/stocks/symbol/${ticker}`);
-      const data = await res.json();
-      setResolvedSymbol(data.symbol);
-    } catch {
-      setResolvedSymbol(`NASDAQ:${ticker}`);
-    }
-  };
 
   const fetchPredictions = async () => {
     try {
       setLoading(true);
-      const res = await fetch("http://localhost:8000/stocks/predictions/generate-intervals", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({ tickers: [ticker] }),
+
+      const res = await api.get(`/stocks/predictions/history/${ticker}?hours_back=24`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` }
       });
 
-      const data = await res.json();
+      const sorted = res.data.sort(
+        (a, b) => new Date(b.prediction_time) - new Date(a.prediction_time)
+      );
 
-      const intervalOrder = ["5m", "15m", "30m", "1h", "1d"];
-      const preds = (data?.predictions ?? [])
-        .filter(p => p.ticker === ticker)
-        .sort((a, b) => intervalOrder.indexOf(a.interval) - intervalOrder.indexOf(b.interval))
-        .map(p => [
-          p.interval,
-          `$${Number(p.predicted_price).toFixed(2)}`,
-          `${p.change >= 0 ? "+" : ""}${p.change.toFixed(2)}%`,
-        ]);
+      const latest = sorted.slice(0, 5).map(p => [
+        `${p.horizon_minutes}m`,
+        `$${p.predicted_price.toFixed(2)}`,
+        `±${p.confidence_high ? (p.confidence_high - p.predicted_price).toFixed(2) : "—"}`
+      ]);
 
-      setPredictions(preds);
-      setLastUpdated(new Date().toLocaleTimeString());
-    } catch {
-      setError("Failed to fetch predictions");
+      setPredictions(latest);
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchSymbol = async () => {
+    try {
+      const res = await api.get(`/stocks/symbol/${ticker}`);
+      setResolvedSymbol(res.data.symbol);
+    } catch {
+      setResolvedSymbol(`NASDAQ:${ticker}`);
+    }
+  };
+
   useEffect(() => {
-    fetchResolvedSymbol();
+    fetchSymbol();
     fetchPredictions();
   }, [ticker]);
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4 }}>
       <Box display="flex" justifyContent="space-between" mb={3}>
-        <Button variant="contained" onClick={goBack}>← Back to Stocks</Button>
-        <SearchBar placeholder="Search or jump to stock..." />
+        <Button variant="contained" onClick={() => navigate("/stock")}>← Back</Button>
+        <SearchBar placeholder="Search stocks..." />
       </Box>
 
-      <Typography variant="h4" fontWeight={700} textAlign="center" gutterBottom>
-        {ticker} — Stock Details
-      </Typography>
+      <Typography variant="h4" textAlign="center">{ticker} — Stock Details</Typography>
 
-      <Box display="flex" flexDirection={{ xs: "column", md: "row" }} gap={3} mt={3}>
-        <Paper sx={{ flex: 2, p: 2, height: 400 }}>
-          <SymbolOverviewChart symbol={resolvedSymbol || `NASDAQ:${ticker}`} theme="light" />
+      <Box display="flex" gap={3} mt={3}>
+        <Paper sx={{ flex: 2, p: 2 }}>
+          <SymbolOverviewChart symbol={resolvedSymbol} theme="light" />
         </Paper>
 
-        <Paper sx={{ flex: 1, p: 3, height: 400 }}>
-          <Typography variant="h6" align="center" mb={2}>Projected Predictions</Typography>
+        <Paper sx={{ flex: 1, p: 3 }}>
+          <Typography variant="h6" textAlign="center">Recent Predictions</Typography>
 
           {loading ? (
-            <Box display="flex" justifyContent="center" mt={4}><CircularProgress /></Box>
-          ) : error ? (
-            <Typography color="error">{error}</Typography>
+            <CircularProgress sx={{ display: "block", mx: "auto", mt: 4 }} />
           ) : (
             <Table>
               <TableHead>
                 <TableRow>
                   <TableCell align="center">Interval</TableCell>
-                  <TableCell align="center">Projected Price</TableCell>
-                  <TableCell align="center">Change %</TableCell>
+                  <TableCell align="center">Predicted Price</TableCell>
+                  <TableCell align="center">Confidence</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -103,15 +90,11 @@ function StockInsights() {
                   <TableRow key={i}>
                     <TableCell align="center">{i}</TableCell>
                     <TableCell align="center">{p}</TableCell>
-                    <TableCell align="center" sx={{ color: c.startsWith("-") ? "#d32f2f" : "#2e7d32" }}>{c}</TableCell>
+                    <TableCell align="center">{c}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
-          )}
-
-          {lastUpdated && !loading && (
-            <Typography align="center" variant="body2" mt={2}>Last updated: {lastUpdated}</Typography>
           )}
         </Paper>
       </Box>

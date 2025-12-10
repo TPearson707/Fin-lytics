@@ -12,6 +12,13 @@ from database import SessionLocal
 from models import Algorithm_Listing, Users, Algorithm_Purchase, Algorithm_Review
 from auth import get_current_user
 from pydantic import BaseModel
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
+# Initialize Stripe
+stripe.api_key = os.getenv("STRIPE_KEY")
 
 load_dotenv()
 
@@ -87,6 +94,7 @@ def create_algorithm_listing(user: dict, db: Session, listing_data: AlgorithmLis
 #   ROUTES (ORDER MATTERS!)
 # ==========================================================
 
+<<<<<<< HEAD
 # --------- 1. List all algorithms (INTERNAL) ----------
 @router.get("/", status_code=200)
 async def list_algorithms(skip: int = 0, limit: int = 100, db: db_dependency = None):
@@ -94,6 +102,33 @@ async def list_algorithms(skip: int = 0, limit: int = 100, db: db_dependency = N
 
 
 # --------- 2. Marketplace (PUBLIC) ----------
+=======
+def check_seller(user: dict, db: Session):
+    seller = db.query(Users).filter(Users.id == user["id"]).first()
+    if not seller or not seller.is_seller:
+        raise HTTPException(403, "Seller permissions required")
+    return seller
+
+def has_purchased(db: Session, buyer_id: int, listing_id: int):
+    # Owner always counts as purchased
+    listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
+    if listing and listing.user_id == buyer_id:
+        return True
+
+    # Otherwise check purchase record
+    return db.query(Algorithm_Purchase).filter(
+        Algorithm_Purchase.buyer_id == buyer_id,
+        Algorithm_Purchase.listing_id == listing_id,
+        Algorithm_Purchase.payment_status == "completed"
+    ).first() is not None
+
+
+
+# ==========================================================
+#   PUBLIC ROUTES
+# ==========================================================
+
+>>>>>>> b9e17d7 (implemented reviewing, purchasing, admin panel in front-end)
 @router.get("/marketplace", status_code=200)
 async def marketplace_listing(
     page: int = 1,
@@ -138,7 +173,13 @@ async def marketplace_listing(
                 "tags": item.category.split(",") if item.category else [],
                 "price": item.price,
                 "rating": item.rating,
+<<<<<<< HEAD
                 "num_reviews": 0,
+=======
+                "num_reviews": db.query(Algorithm_Review)
+                               .filter(Algorithm_Review.listing_id == item.id)
+                               .count(), 
+>>>>>>> b9e17d7 (implemented reviewing, purchasing, admin panel in front-end)
                 "updated_at": item.updated_at,
             }
             for item in listings
@@ -189,9 +230,76 @@ async def upload_algorithm(listing_id: int, file: UploadFile = File(...), user: 
         raise HTTPException(500, "Upload failed")
 
 
+<<<<<<< HEAD
 # --------- 5. Get single listing ----------
 @router.get("/{listing_id}", status_code=200)
 async def get_algorithm(listing_id: int, db: db_dependency):
+=======
+# ==========================================================
+#   SELLER ROUTES
+# ==========================================================
+
+@router.post("/", status_code=201)
+async def create_listing(payload: AlgorithmListingCreate, user: user_dependency, db: db_dependency):
+    check_seller(user, db)
+
+    listing = Algorithm_Listing(
+        user_id=user["id"],
+        title=payload.title,
+        description=payload.description,
+        category=payload.category,
+        price=payload.price,
+        version=payload.version,
+        approval_status="pending"
+    )
+
+    db.add(listing)
+    db.commit()
+    db.refresh(listing)
+
+    return {"message": "Listing created", "id": listing.id}
+
+@router.delete("/{listing_id}", status_code=200)
+async def delete_listing(
+    listing_id: int,
+    user: user_dependency,
+    db: db_dependency
+):
+    listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
+
+    if not listing:
+        raise HTTPException(404, "Listing not found")
+
+    if listing.user_id != user["id"]:
+        raise HTTPException(403, "Not authorized")
+
+    # Delete file if exists
+    if listing.file_path and os.path.exists(listing.file_path):
+        try:
+            os.remove(listing.file_path)
+        except:
+            pass  # avoid breaking delete if file is already gone
+
+    # Delete purchases
+    db.query(Algorithm_Purchase).filter(
+        Algorithm_Purchase.listing_id == listing_id
+    ).delete()
+
+    # Delete reviews
+    db.query(Algorithm_Review).filter(
+        Algorithm_Review.listing_id == listing_id
+    ).delete()
+
+    # Remove listing
+    db.delete(listing)
+    db.commit()
+
+    return {"message": "Listing deleted"}
+
+
+@router.put("/{listing_id}", status_code=200)
+async def update_listing(listing_id: int, payload: AlgorithmListingUpdate, user: user_dependency, db: db_dependency):
+>>>>>>> b9e17d7 (implemented reviewing, purchasing, admin panel in front-end)
     listing = db.query(Algorithm_Listing).filter(Algorithm_Listing.id == listing_id).first()
     if not listing:
         raise HTTPException(404, "Algorithm not found")
@@ -363,6 +471,7 @@ async def purchase_algorithm(
             detail=f"Failed to create checkout session: {str(e)}"
         )
 
+<<<<<<< HEAD
 @router.post("/purchase/verify", status_code=status.HTTP_200_OK)
 async def verify_purchase(
     session_id: str,
@@ -498,6 +607,82 @@ async def download_algorithm(
         path=listing.file_path,
         filename=listing.file_name or f"algorithm_{listing_id}",
         media_type='application/octet-stream'
+=======
+    # Prevent buying your own listing
+    if listing.user_id == user["id"]:
+        return {"message": "You already own this listing"}
+
+    # If already purchased, don't duplicate rows
+    if has_purchased(db, user["id"], payload.listing_id):
+        return {"message": "Already purchased"}
+
+    # (Stripe logic later — free purchase for now)
+    purchase = Algorithm_Purchase(
+        buyer_id=user["id"],
+        listing_id=listing.id,
+        purchase_price=listing.price or 0.0,
+        payment_status="completed"
+    )
+
+    db.add(purchase)
+    db.commit()
+
+    return {"message": "Algorithm unlocked"}
+
+
+
+@router.get("/{listing_id}/download", status_code=200)
+async def download_algorithm(
+    listing_id: int,
+    user: user_dependency,
+    db: db_dependency
+):
+    listing = db.query(Algorithm_Listing).filter(
+        Algorithm_Listing.id == listing_id
+    ).first()
+
+    if not listing:
+        raise HTTPException(404, "Listing not found")
+
+    if not listing.file_path or not os.path.exists(listing.file_path):
+        raise HTTPException(404, "File missing or not uploaded yet")
+
+    # ---- Check permissions ----
+    is_owner = user and user["id"] == listing.user_id
+    has_access = user and has_purchased(db, user["id"], listing_id)
+
+    # If the listing has a price and the requester isn't the owner or a buyer
+    if listing.price and listing.price > 0 and not (is_owner or has_access):
+        raise HTTPException(403, "Purchase required")
+
+    # ---- Count download ----
+    listing.download_count += 1
+    db.commit()
+
+    return FileResponse(
+        listing.file_path,
+        filename=listing.file_name,
+        media_type="application/octet-stream"
+    )
+
+
+
+# ==========================================================
+#   REVIEWS
+# ==========================================================
+
+@router.post("/reviews", status_code=201)
+async def create_review(payload: ReviewCreate, user: user_dependency, db: db_dependency):
+
+    if not has_purchased(db, user["id"], payload.listing_id):
+        raise HTTPException(403, "Purchase required before reviewing")
+
+    review = Algorithm_Review(
+        reviewer_id=user["id"],
+        listing_id=payload.listing_id,
+        rating=payload.rating,
+        comment=payload.comment
+>>>>>>> b9e17d7 (implemented reviewing, purchasing, admin panel in front-end)
     )
 
 @router.post("/reviews", status_code=status.HTTP_201_CREATED)
@@ -542,6 +727,7 @@ async def create_review(
     
     db.add(review)
     db.commit()
+<<<<<<< HEAD
     db.refresh(review)
     
     # Update listing rating
@@ -551,6 +737,23 @@ async def create_review(
         "message": "Review created successfully",
         "review_id": review.id
     }
+=======
+
+    # --- NEW: Update aggregate rating on listing ---
+    avg_rating = db.query(func.avg(Algorithm_Review.rating)).filter(
+        Algorithm_Review.listing_id == payload.listing_id
+    ).scalar()
+
+    listing = db.query(Algorithm_Listing).filter(
+        Algorithm_Listing.id == payload.listing_id
+    ).first()
+
+    listing.rating = round(float(avg_rating or 0), 2)
+    db.commit()
+
+    return {"message": "Review submitted", "updated_rating": listing.rating}
+
+>>>>>>> b9e17d7 (implemented reviewing, purchasing, admin panel in front-end)
 
 @router.get("/{listing_id}/reviews", status_code=status.HTTP_200_OK)
 async def get_listing_reviews(
