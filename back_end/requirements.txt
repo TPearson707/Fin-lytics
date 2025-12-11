@@ -20,3 +20,4 @@ tzdata
 stripe
 resend
 pandas_market_calendars
+psycopg2-binary
