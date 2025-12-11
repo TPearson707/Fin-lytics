@@ -114,7 +114,7 @@ const About = () => {
                         mb: 2
                     }}
                 >
-                    Fin-lytics
+                    Finlytics
                 </Typography>
                 <Typography variant="h5" color="text.secondary" sx={{ fontWeight: 300 }}>
                     Empowering Financial Literacy Through Innovation

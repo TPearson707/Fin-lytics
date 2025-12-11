@@ -5,6 +5,14 @@ import { Box, Button, TextField, Typography, CircularProgress } from '@mui/mater
 import './login.scss';
 
 const LoginBlock = ({ isSigningUp: initialSigningUp, setIsAuthenticated }) => {
+        // Validation helpers
+        const validateEmail = (email) => {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        };
+        const validatePhone = (phone) => {
+            return /^\d{10,15}$/.test(phone.replace(/\D/g, ''));
+        };
+        const [inputError, setInputError] = useState("");
     const [isSigningUp, setIsSigningUp] = useState(true);
     const [step, setStep] = useState(1);
     const [firstName, setFirstName] = useState("");
@@ -119,12 +127,32 @@ const LoginBlock = ({ isSigningUp: initialSigningUp, setIsAuthenticated }) => {
                             margin="normal"
                             required
                         />
+                        {inputError && (
+                            <Typography color="error" sx={{ mt: 1, mb: 1 }}>
+                                {inputError}
+                            </Typography>
+                        )}
                         <Button
                             variant="contained"
                             color="primary"
                             fullWidth
                             sx={{ mt: 2 }}
-                            onClick={() => setStep(2)}
+                            onClick={() => {
+                                if (!firstName.trim() || !lastName.trim()) {
+                                    setInputError("First and last name are required.");
+                                    return;
+                                }
+                                if (!validateEmail(email)) {
+                                    setInputError("Please enter a valid email address.");
+                                    return;
+                                }
+                                if (!validatePhone(number)) {
+                                    setInputError("Please enter a valid phone number (10-15 digits).");
+                                    return;
+                                }
+                                setInputError("");
+                                setStep(2);
+                            }}
                         >
                             Next
                         </Button>

@@ -47,8 +47,8 @@ export default function PendingApprovals() {
 
       toast.success(
         actionType === "approve"
-          ? "Listing Approved 🎉"
-          : "Listing Rejected ❌"
+          ? "Listing Approved"
+          : "Listing Rejected"
       );
 
       setActionOpen(false);

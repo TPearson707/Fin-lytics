@@ -6,9 +6,10 @@ import Typography from '@mui/material/Typography';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { Pie } from "react-chartjs-2";
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
 
 const VisualCard = () => {
     const [pieChartData, setPieChartData] = useState(null);
@@ -126,8 +127,28 @@ const VisualCard = () => {
                 labels: { font: { family: "Quicksand", weight: "Bold" } },
             },
             tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        const label = context.label || '';
+                        const value = context.parsed || 0;
+                        return `${label}: $${value.toLocaleString()}`;
+                    }
+                },
                 bodyFont: { family: "Quicksand", weight: "Bold" },
                 titleFont: { family: "Quicksand", weight: "Bold" },
+            },
+            datalabels: {
+                color: '#333',
+                font: { family: 'Quicksand', weight: 'bold', size: 14 },
+                formatter: (value, context) => {
+                    // Show label and value inside the slice
+                    const label = context.chart.data.labels[context.dataIndex];
+                    return `${label}\n$${value.toLocaleString()}`;
+                },
+                display: true,
+                align: 'center',
+                anchor: 'center',
+                clamp: true,
             },
         },
     };

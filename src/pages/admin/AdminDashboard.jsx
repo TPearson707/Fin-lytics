@@ -97,19 +97,18 @@ export default function AdminDashboard() {
           ))}
         </Grid>
 
-        {/* Visuals/Plots Section */}
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 3, width: '100%' }}>
           <Box sx={{ flex: 1, minWidth: 350, maxWidth: 500 }}>
             <Paper sx={{ p: 3, minHeight: 350, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
               <Typography sx={{ mb: 2, fontWeight: 600 }}>
                 Listing Approval Breakdown
               </Typography>
-              <ResponsiveContainer width={300} height={220}>
+              <ResponsiveContainer width={300} height={250}>
                 <PieChart>
                   <Pie
                     data={listingBreakdown}
                     cx={150}
-                    cy={110}
+                    cy={100}
                     label
                     outerRadius={90}
                     dataKey="value"
@@ -118,18 +117,18 @@ export default function AdminDashboard() {
                       <Cell key={index} fill={COLORS[index]} />
                     ))}
                   </Pie>
-                  <Legend verticalAlign="top" height={36} align="center" layout="horizontal" />
+                  <Legend verticalAlign="bottom" height={36} align="center" layout="horizontal" />
                 </PieChart>
               </ResponsiveContainer>
             </Paper>
           </Box>
 
-          <Box sx={{ flex: 2, minWidth: 350, maxWidth: 700 }}>
+          <Box sx={{ flex: 2, minWidth: 350, maxWidth: 500 }}>
             <Paper sx={{ p: 3, minHeight: 350, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
               <Typography sx={{ mb: 2, fontWeight: 600 }}>
                 Revenue Growth
               </Typography>
-              <ResponsiveContainer width={400} height={220}>
+              <ResponsiveContainer width={400} height={250}>
                 <LineChart data={revenueHistory} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <XAxis dataKey="month" tick={{ fontSize: 14 }} />
                   <YAxis tick={{ fontSize: 14 }} />
@@ -146,7 +145,7 @@ export default function AdminDashboard() {
               <Typography sx={{ mb: 2, fontWeight: 600 }}>
                 Seller Metrics
               </Typography>
-              <ResponsiveContainer width={300} height={220}>
+              <ResponsiveContainer width={300} height={250}>
                 <BarChart data={sellerData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                   <XAxis dataKey="name" tick={{ fontSize: 14 }} />
                   <YAxis tick={{ fontSize: 14 }} />
