@@ -141,7 +141,6 @@ const VisualCard = () => {
                 color: '#333',
                 font: { family: 'Quicksand', weight: 'bold', size: 14 },
                 formatter: (value, context) => {
-                    // Show label and value inside the slice
                     const label = context.chart.data.labels[context.dataIndex];
                     return `${label}\n$${value.toLocaleString()}`;
                 },
