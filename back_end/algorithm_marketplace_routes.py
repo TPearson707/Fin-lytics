@@ -118,6 +118,29 @@ def has_purchased(db: Session, buyer_id: int, listing_id: int):
         Algorithm_Purchase.payment_status == "completed"
     ).first() is not None
 
+def has_purchased(db: Session, buyer_id: int, listing_id: int):
+    listing = db.query(Algorithm_Listing).filter(
+        Algorithm_Listing.id == listing_id
+    ).first()
+
+    if not listing:
+        return False
+
+    # Owner always counts
+    if listing.user_id == buyer_id:
+        return True
+
+    # Free listing counts as purchased
+    if listing.price is None or listing.price == 0:
+        return True
+
+    return db.query(Algorithm_Purchase).filter(
+        Algorithm_Purchase.buyer_id == buyer_id,
+        Algorithm_Purchase.listing_id == listing_id,
+        Algorithm_Purchase.payment_status == "completed"
+    ).first() is not None
+
+
 
 
 # ==========================================================
